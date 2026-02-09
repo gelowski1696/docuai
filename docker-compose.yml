@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  docuai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: docuai-app
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persist SQLite database
+      - docuai-data:/app/data
+    env_file:
+      - .env
+    environment:
+      # Override database path for Docker
+      - DATABASE_URL=file:/app/data/dev.db
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  docuai-data:
+    driver: local
+

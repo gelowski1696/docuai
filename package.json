@@ -6,21 +6,48 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "security:check": "npx tsx scripts/security-check.ts",
+    "db:sqlite": "node scripts/switch-db.js sqlite",
+    "db:postgres": "node scripts/switch-db.js postgres",
+    "seed:sqlite": "npx tsx prisma/seed-sqlite.ts",
+    "seed:supabase": "npx tsx prisma/seed-supabase.ts"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@prisma/client": "^5.22.0",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.95.3",
+    "bcryptjs": "^3.0.3",
+    "date-fns": "^4.1.0",
+    "docx": "^9.5.1",
+    "docx-preview": "^0.3.7",
+    "exceljs": "^4.4.0",
+    "framer-motion": "^12.33.0",
+    "jsonwebtoken": "^9.0.3",
     "next": "16.1.6",
+    "openai": "^6.18.0",
+    "prisma": "^5.22.0",
+    "puppeteer": "^24.37.1",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "xlsx": "^0.18.5",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
   }
 }
