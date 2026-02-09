@@ -113,11 +113,6 @@ export default function LoginPage() {
           </Link>
         </p>
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-500 text-center">
-            Demo credentials: admin@docuai.com / admin123
-          </p>
-        </div>
       </div>
     </div>
   );
