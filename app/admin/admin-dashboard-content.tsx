@@ -1,19 +1,23 @@
 import { prisma } from '@/lib/prisma';
 import { unstable_noStore as noStore } from 'next/cache';
 
+type TemplateAggregateRow = {
+  id: string;
+  name: string;
+  count: number;
+  totalTokens: bigint | number | null;
+};
+
 export default async function AdminDashboard() {
   noStore();
 
-  // Fetch aggregate stats
-  const [userCount, documentCount, usageStats] = await Promise.all([
-    prisma.user.count(),
-    prisma.document.count(),
-    prisma.usage.aggregate({
-      _sum: {
-        tokensUsed: true
-      }
-    })
-  ]);
+  const userCount = await prisma.user.count();
+  const documentCount = await prisma.document.count();
+  const usageStats = await prisma.usage.aggregate({
+    _sum: {
+      tokensUsed: true
+    }
+  });
 
   const totalTokens = usageStats._sum.tokensUsed || 0;
   
@@ -48,32 +52,37 @@ export default async function AdminDashboard() {
 
   const potentialMrr = mrr + (tierCounts.FREE * PRICING.STARTER);
 
-  // Fetch template analytics
-  const templates = await prisma.template.findMany({
-    where: { isActive: true },
-    select: { id: true, name: true, type: true }
-  });
+  // Use one aggregated query to avoid high Prisma connection fan-out.
+  const templateRows = await prisma.$queryRaw<TemplateAggregateRow[]>`
+    SELECT
+      t."id" AS "id",
+      t."name" AS "name",
+      COUNT(d."id")::int AS "count",
+      COALESCE(SUM(u."tokensUsed"), 0)::bigint AS "totalTokens"
+    FROM "Template" t
+    LEFT JOIN "Document" d ON d."templateId" = t."id"
+    LEFT JOIN "Usage" u ON u."documentId" = d."id"
+    WHERE t."isActive" = true
+    GROUP BY t."id", t."name"
+    ORDER BY COUNT(d."id") DESC
+    LIMIT 5
+  `;
 
-  const templateStats = await Promise.all(templates.map(async (t) => {
-    const [count, tokens] = await Promise.all([
-      prisma.document.count({ where: { templateId: t.id } }),
-      prisma.usage.aggregate({
-        where: { document: { templateId: t.id } },
-        _sum: { tokensUsed: true }
-      })
-    ]);
+  const topTemplates = templateRows.map((row) => {
+    const count = Number(row.count ?? 0);
+    const totalTokensRaw = row.totalTokens ?? 0;
+    const totalTokensForTemplate = typeof totalTokensRaw === 'bigint'
+      ? Number(totalTokensRaw)
+      : Number(totalTokensRaw);
+
     return {
-      id: t.id,
-      name: t.name,
+      id: row.id,
+      name: row.name,
       count,
-      avgTokens: count > 0 ? Math.round((tokens._sum.tokensUsed || 0) / count) : 0,
-      totalTokens: tokens._sum.tokensUsed || 0
+      avgTokens: count > 0 ? Math.round(totalTokensForTemplate / count) : 0,
+      totalTokens: totalTokensForTemplate,
     };
-  }));
-
-  const topTemplates = [...templateStats]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
+  });
 
   const maxCount = Math.max(...topTemplates.map(t => t.count), 1);
 

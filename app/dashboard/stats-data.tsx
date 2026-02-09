@@ -7,25 +7,23 @@ interface StatsDataProps {
 }
 
 export default async function StatsData({ userId }: StatsDataProps) {
-  const [user, documentCount, allTemplates, usageStats] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: { subscriptionTier: true },
-    }),
-    prisma.document.count({
-      where: { userId },
-    }),
-    prisma.template.findMany({
-      where: { isActive: true },
-      select: { type: true },
-    }),
-    prisma.usage.aggregate({
-      where: { userId },
-      _sum: {
-        tokensUsed: true,
-      },
-    }),
-  ]);
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { subscriptionTier: true },
+  });
+  const documentCount = await prisma.document.count({
+    where: { userId },
+  });
+  const allTemplates = await prisma.template.findMany({
+    where: { isActive: true },
+    select: { type: true },
+  });
+  const usageStats = await prisma.usage.aggregate({
+    where: { userId },
+    _sum: {
+      tokensUsed: true,
+    },
+  });
 
   const activeTemplatesCount = getAccessibleTemplatesCount(user?.subscriptionTier || 'FREE', allTemplates);
   const totalTokens = usageStats._sum.tokensUsed || 0;
