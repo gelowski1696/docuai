@@ -4,11 +4,14 @@
 # ============================================
 
 # Stage 1: Dependencies
-FROM node:20-alpine AS deps
+FROM node:20-bookworm-slim AS deps
 WORKDIR /app
 
 # Install dependencies needed for Prisma and native modules
-RUN apk add --no-cache libc6-compat openssl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl \
+    ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package.json package-lock.json* ./
@@ -18,7 +21,7 @@ RUN npm ci
 
 # ============================================
 # Stage 2: Builder
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 
 # Copy dependencies from deps stage
@@ -40,28 +43,27 @@ RUN npm run build
 
 # ============================================
 # Stage 3: Runner (Production)
-FROM node:20-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 
 # Install runtime dependencies including Chromium for Puppeteer
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     chromium \
-    nss \
-    freetype \
-    harfbuzz \
+    libnss3 \
+    libfreetype6 \
+    libharfbuzz0b \
     ca-certificates \
-    ttf-freefont \
-    nodejs \
-    yarn
+    fonts-liberation \
+  && rm -rf /var/lib/apt/lists/*
 
 # Tell Puppeteer to use the installed Chromium
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 # Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN groupadd --system --gid 1001 nodejs \
+  && useradd --system --uid 1001 --gid nodejs --create-home nextjs
 
 # Copy necessary files from builder
 COPY --from=builder /app/public ./public
