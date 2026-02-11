@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { updateUserRole } from '@/app/actions/admin-users';
+import TierEditor from '@/app/admin/users/role-toggle';
 
 export default async function AdminUsersPage() {
   const users = await prisma.user.findMany({
@@ -26,10 +26,11 @@ export default async function AdminUsersPage() {
             <thead>
               <tr className="bg-background/20">
                 <th className="px-8 py-6 text-left text-sm font-bold text-gray-400 uppercase tracking-widest">User Details</th>
+                <th className="px-8 py-6 text-center text-sm font-bold text-gray-400 uppercase tracking-widest">Tier</th>
                 <th className="px-8 py-6 text-center text-sm font-bold text-gray-400 uppercase tracking-widest">Role</th>
                 <th className="px-8 py-6 text-center text-sm font-bold text-gray-400 uppercase tracking-widest">Docs</th>
                 <th className="px-8 py-6 text-center text-sm font-bold text-gray-400 uppercase tracking-widest">Joined</th>
-                <th className="px-8 py-6 text-right text-sm font-bold text-gray-400 uppercase tracking-widest">Actions</th>
+                <th className="px-8 py-6 text-right text-sm font-bold text-gray-400 uppercase tracking-widest">Tier Edit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -42,6 +43,19 @@ export default async function AdminUsersPage() {
                       </div>
                       <div className="font-black text-lg">{user.email}</div>
                     </div>
+                  </td>
+                  <td className="px-8 py-6 whitespace-nowrap text-center">
+                    <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-xs font-black border uppercase tracking-widest ${
+                      user.subscriptionTier === 'PRO'
+                        ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                        : user.subscriptionTier === 'ENTERPRISE'
+                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                        : user.subscriptionTier === 'STARTER'
+                        ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30'
+                        : 'bg-slate-500/10 text-slate-600 border-slate-500/30'
+                    }`}>
+                      {user.subscriptionTier}
+                    </span>
                   </td>
                   <td className="px-8 py-6 whitespace-nowrap text-center">
                     <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-xs font-black border uppercase tracking-widest ${
@@ -59,7 +73,7 @@ export default async function AdminUsersPage() {
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-8 py-6 whitespace-nowrap text-right">
-                    <RoleToggle userId={user.id} currentRole={user.role} />
+                    <TierEditor userId={user.id} currentTier={user.subscriptionTier} />
                   </td>
                 </tr>
               ))}
@@ -70,6 +84,3 @@ export default async function AdminUsersPage() {
     </div>
   );
 }
-
-// Inline Client Component for toggling role
-import RoleToggle from '@/app/admin/users/role-toggle';

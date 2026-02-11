@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { updateUserRole } from '@/app/actions/admin-users';
+import { updateUserTier } from '@/app/actions/admin-users';
 import { useRouter } from 'next/navigation';
 
-export default function RoleToggle({ userId, currentRole }: { userId: string, currentRole: string }) {
+const TIER_OPTIONS = ['FREE', 'STARTER', 'PRO', 'ENTERPRISE'] as const;
+
+export default function TierEditor({ userId, currentTier }: { userId: string; currentTier: string }) {
   const [loading, setLoading] = useState(false);
+  const [selectedTier, setSelectedTier] = useState(currentTier);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const router = useRouter();
 
@@ -15,19 +18,19 @@ export default function RoleToggle({ userId, currentRole }: { userId: string, cu
     return () => clearTimeout(timer);
   }, [notification]);
 
-  const handleToggle = async () => {
-    const newRole = currentRole === 'ADMIN' ? 'USER' : 'ADMIN';
-    if (!confirm(`Are you sure you want to change this user to ${newRole}?`)) return;
+  const handleSave = async () => {
+    if (selectedTier === currentTier) return;
+    if (!confirm(`Are you sure you want to change this user tier to ${selectedTier}?`)) return;
 
     setLoading(true);
-    const result = await updateUserRole(userId, newRole);
+    const result = await updateUserTier(userId, selectedTier);
     setLoading(false);
 
     if (result.success) {
       router.refresh();
-      setNotification({ type: 'success', message: `User role changed to ${newRole}.` });
+      setNotification({ type: 'success', message: `User tier changed to ${selectedTier}.` });
     } else {
-      setNotification({ type: 'error', message: result.error || 'Failed to update role' });
+      setNotification({ type: 'error', message: result.error || 'Failed to update tier' });
     }
   };
 
@@ -46,17 +49,27 @@ export default function RoleToggle({ userId, currentRole }: { userId: string, cu
           </div>
         </div>
       )}
-      <button
-        onClick={handleToggle}
-        disabled={loading}
-        className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 disabled:opacity-50 ${
-          currentRole === 'ADMIN'
-            ? 'bg-red-50 text-red-600 hover:bg-red-600 hover:text-white'
-            : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white'
-        }`}
-      >
-        {loading ? 'Updating...' : currentRole === 'ADMIN' ? 'Demote to User' : 'Promote to Admin'}
-      </button>
+      <div className="flex items-center justify-end gap-2">
+        <select
+          value={selectedTier}
+          onChange={(e) => setSelectedTier(e.target.value)}
+          disabled={loading}
+          className="h-10 min-w-[128px] rounded-xl border border-border/50 bg-white dark:bg-slate-900 px-3 text-sm font-bold"
+        >
+          {TIER_OPTIONS.map((tier) => (
+            <option key={tier} value={tier}>
+              {tier}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={handleSave}
+          disabled={loading || selectedTier === currentTier}
+          className="h-10 px-4 rounded-xl text-sm font-bold transition-all duration-300 disabled:opacity-50 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white"
+        >
+          {loading ? 'Saving...' : 'Save'}
+        </button>
+      </div>
     </>
   );
 }
