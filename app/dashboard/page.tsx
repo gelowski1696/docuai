@@ -15,28 +15,28 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-background selection:bg-indigo-100 dark:selection:bg-indigo-900 overflow-hidden">
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative">
         {/* Animated Background Elements */}
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] animate-pulse pointer-events-none"></div>
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-purple-500/10 rounded-full blur-[100px] animate-pulse delay-700 pointer-events-none"></div>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-        <header className="mb-16 relative">
+        <header className="mb-10 sm:mb-16 relative">
           <div className="relative">
-            <h2 className="text-5xl md:text-6xl font-black tracking-tight mb-6">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight mb-4 sm:mb-6">
               Welcome back, <span className="gradient-text">{sessionUser.email.split('@')[0]}</span>
             </h2>
-            <p className="text-xl text-gray-500 dark:text-gray-400 max-w-2xl leading-relaxed">
+            <p className="text-base sm:text-xl text-gray-500 dark:text-gray-400 max-w-2xl leading-relaxed">
               Your AI workspace is ready. Experience the future of document generation with DocuAI.
             </p>
           </div>
         </header>
 
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-20 relative">
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8 mb-12 sm:mb-20 relative">
           {/* Generate Document Card */}
           <Link
             href="/generate"
-            className="group relative flex flex-col p-10 rounded-[2.5rem] border border-border/50 bg-card/50 glass hover:border-primary/50 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-2 overflow-hidden"
+            className="group relative flex flex-col p-6 sm:p-10 rounded-[2.5rem] border border-border/50 bg-card/50 glass hover:border-primary/50 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-2 overflow-hidden"
           >
             <div className="absolute top-0 right-0 p-6">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white scale-100 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-xl shadow-indigo-500/20">
@@ -46,9 +46,9 @@ export default async function DashboardPage() {
               </div>
             </div>
             
-            <div className="mt-12">
-              <h3 className="text-3xl font-bold mb-4">Generate</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-lg leading-relaxed">
+            <div className="mt-10 sm:mt-12">
+              <h3 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Generate</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg leading-relaxed">
                 Create high-quality invoices, reports, and memos instantly with our advanced AI engine.
               </p>
             </div>
@@ -64,7 +64,7 @@ export default async function DashboardPage() {
           {/* My Documents Card */}
           <Link
             href="/documents"
-            className="group relative flex flex-col p-10 rounded-[2.5rem] border border-border/50 bg-card/50 glass hover:border-primary/50 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-2 overflow-hidden"
+            className="group relative flex flex-col p-6 sm:p-10 rounded-[2.5rem] border border-border/50 bg-card/50 glass hover:border-primary/50 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-2 overflow-hidden"
           >
             <div className="absolute top-0 right-0 p-6">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center text-white scale-100 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500 shadow-xl shadow-blue-500/20">
@@ -74,9 +74,9 @@ export default async function DashboardPage() {
               </div>
             </div>
             
-            <div className="mt-12">
-              <h3 className="text-3xl font-bold mb-4">Library</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-lg leading-relaxed">
+            <div className="mt-10 sm:mt-12">
+              <h3 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Library</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg leading-relaxed">
                 Seamlessly access and manage your entire history of AI-generated documents in one place.
               </p>
             </div>
@@ -93,7 +93,7 @@ export default async function DashboardPage() {
           {sessionUser.role === 'ADMIN' && (
             <Link
               href="/admin"
-              className="group relative flex flex-col p-10 rounded-[2.5rem] border border-border/50 bg-card/50 glass hover:border-primary/50 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-2 overflow-hidden"
+              className="group relative flex flex-col p-6 sm:p-10 rounded-[2.5rem] border border-border/50 bg-card/50 glass hover:border-primary/50 transition-all duration-500 shadow-sm hover:shadow-2xl hover:-translate-y-2 overflow-hidden"
             >
               <div className="absolute top-0 right-0 p-6">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white scale-100 group-hover:scale-110 transition-all duration-500 shadow-xl shadow-purple-500/20">
@@ -103,9 +103,9 @@ export default async function DashboardPage() {
                 </div>
               </div>
               
-              <div className="mt-12">
-                <h3 className="text-3xl font-bold mb-4">Admin</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-lg leading-relaxed">
+              <div className="mt-10 sm:mt-12">
+                <h3 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Admin</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg leading-relaxed">
                   Enterprise-grade control over templates, system health, and user performance metrics.
                 </p>
               </div>

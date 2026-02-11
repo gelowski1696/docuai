@@ -109,11 +109,11 @@ export function AdminSidebar() {
   };
 
   return (
-    <div className="glass rounded-[2rem] p-6 border border-border/50 sticky top-24">
-      <h2 className="text-xl font-black mb-6 px-2">Management</h2>
-      <nav className="space-y-2">
+    <div className="glass rounded-[2rem] p-4 sm:p-6 border border-border/50 md:sticky md:top-24">
+      <h2 className="text-lg sm:text-xl font-black mb-4 sm:mb-6 px-2">Management</h2>
+      <nav className="space-y-2 md:space-y-2 max-md:flex max-md:gap-2 max-md:overflow-x-auto max-md:pb-1">
         {adminNavItems.map((item) => (
-          <Link key={item.href} href={item.href} className={getItemClass(item)}>
+          <Link key={item.href} href={item.href} className={`${getItemClass(item)} max-md:whitespace-nowrap max-md:min-w-max`}>
             {item.icon}
             {item.label}
           </Link>

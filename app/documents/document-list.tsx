@@ -158,7 +158,7 @@ export default function DocumentList({ initialDocuments }: DocumentListProps) {
     <>
       {/* Notification Toast */}
       {notification && (
-        <div className={`fixed bottom-8 right-8 z-[110] px-6 py-4 rounded-2xl shadow-2xl border animate-in slide-in-from-right-10 duration-500 ${
+        <div className={`fixed bottom-4 right-4 left-4 sm:left-auto sm:bottom-8 sm:right-8 z-[110] px-4 sm:px-6 py-4 rounded-2xl shadow-2xl border animate-in slide-in-from-right-10 duration-500 ${
           notification.type === 'success' 
             ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/40 dark:border-emerald-800 dark:text-emerald-400' 
             : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/40 dark:border-red-800 dark:text-red-400'
@@ -179,7 +179,7 @@ export default function DocumentList({ initialDocuments }: DocumentListProps) {
       )}
 
       {/* Filter Bar */}
-      <div className="mb-6 flex flex-wrap gap-4 items-center">
+      <div className="mb-6 flex flex-wrap gap-3 sm:gap-4 items-center">
         <button
           onClick={() => setFilterFavorites(!filterFavorites)}
           className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
@@ -213,13 +213,13 @@ export default function DocumentList({ initialDocuments }: DocumentListProps) {
           </button>
         )}
         
-        <span className="text-sm text-gray-500 ml-auto">
+        <span className="text-sm text-gray-500 w-full sm:w-auto sm:ml-auto">
           Showing {filteredDocuments.length} of {documents.length} documents
         </span>
       </div>
 
       <div className="glass rounded-[2.5rem] border border-border/50 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-700">
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full divide-y divide-border/30">
             <thead>
               <tr className="bg-background/20">
@@ -399,6 +399,117 @@ export default function DocumentList({ initialDocuments }: DocumentListProps) {
               })}
             </tbody>
           </table>
+        </div>
+
+        <div className="md:hidden p-4 space-y-3">
+          {filteredDocuments.map((doc) => {
+            const isProcessing = doc.status === 'PROCESSING';
+            const isFailed = doc.status === 'FAILED';
+
+            return (
+              <div key={doc.id} className="rounded-2xl border border-border/40 bg-white/40 dark:bg-slate-900/40 p-4 space-y-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-black">{doc.template.name}</div>
+                    <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                      {isProcessing ? 'Generation in Progress...' : doc.template.type}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleToggleFavorite(doc.id)}
+                    className="text-lg"
+                    title={doc.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    {doc.isFavorite ? '★' : '☆'}
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {isProcessing ? (
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-200">
+                      Processing
+                    </span>
+                  ) : isFailed ? (
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-50 text-red-600 border border-red-200">
+                      Failed
+                    </span>
+                  ) : (
+                    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                      doc.format === 'PDF'
+                        ? 'bg-red-50 text-red-600 border-red-200'
+                        : doc.format === 'DOCX'
+                          ? 'bg-indigo-50 text-indigo-600 border-indigo-200'
+                          : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                    }`}>
+                      {doc.format}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    {new Date(doc.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-1">
+                  {doc.tags?.split(',').map((tag: string) => tag.trim()).filter(Boolean).map((tag: string) => (
+                    <span key={tag} className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-full">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handleViewClick(doc)}
+                    disabled={doc.status !== 'COMPLETED'}
+                    className={`inline-flex items-center justify-center p-3 rounded-xl bg-background/50 border border-border/50 transition-all duration-300 shadow-sm ${
+                      doc.status !== 'COMPLETED'
+                        ? 'opacity-20 cursor-not-allowed'
+                        : 'hover:bg-indigo-500 hover:text-white hover:border-indigo-500'
+                    }`}
+                    title="Quick View"
+                  >
+                    View
+                  </button>
+                  <a
+                    href={doc.status === 'COMPLETED' ? `/api/files/${doc.fileUrl}` : '#'}
+                    download={doc.status === 'COMPLETED'}
+                    className={`inline-flex items-center justify-center p-3 rounded-xl bg-background/50 border border-border/50 transition-all duration-300 shadow-sm ${
+                      doc.status !== 'COMPLETED'
+                        ? 'opacity-20 cursor-not-allowed pointer-events-none'
+                        : 'hover:bg-emerald-500 hover:text-white hover:border-emerald-500'
+                    }`}
+                    title="Download Document"
+                  >
+                    Download
+                  </a>
+                  <button
+                    onClick={() => handleClone(doc.id)}
+                    disabled={isProcessing}
+                    className={`inline-flex items-center justify-center p-3 rounded-xl bg-background/50 border border-border/50 transition-all duration-300 shadow-sm ${
+                      isProcessing
+                        ? 'opacity-20 cursor-not-allowed'
+                        : 'hover:bg-blue-500 hover:text-white hover:border-blue-500'
+                    }`}
+                    title="Clone Document"
+                  >
+                    Clone
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(doc)}
+                    disabled={isProcessing}
+                    className={`inline-flex items-center justify-center p-3 rounded-xl bg-background/50 border border-border/50 transition-all duration-300 shadow-sm ${
+                      isProcessing
+                        ? 'opacity-20 cursor-not-allowed'
+                        : 'hover:bg-red-500 hover:text-white hover:border-red-500'
+                    }`}
+                    title="Delete Document"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

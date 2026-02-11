@@ -16,7 +16,6 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
-    // Client-side validation
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -44,9 +43,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // Redirect to dashboard on success
       router.push('/dashboard');
-    } catch (err) {
+    } catch {
       setError('An error occurred. Please try again.');
       setLoading(false);
     }
@@ -54,12 +52,11 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
-      {/* Background Glows */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none"></div>
 
-      <div className="max-w-md w-full glass rounded-3xl shadow-2xl p-10 relative z-10 border border-border/50">
-        <div className="text-center mb-10">
+      <div className="max-w-md w-full glass rounded-3xl shadow-2xl p-5 sm:p-8 md:p-10 relative z-10 border border-border/50">
+        <div className="text-center mb-8 sm:mb-10">
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-[1.25rem] flex items-center justify-center text-white shadow-xl shadow-indigo-500/20">
               <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,10 +64,10 @@ export default function RegisterPage() {
               </svg>
             </div>
           </div>
-          <h1 className="text-4xl font-black tracking-tight mb-3">
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-3">
             <span className="gradient-text">DocuAI</span>
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 font-medium text-lg">Create your account</p>
+          <p className="text-gray-500 dark:text-gray-400 font-medium text-base sm:text-lg">Create your account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -106,7 +103,7 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-              placeholder="••••••••"
+              placeholder="********"
             />
           </div>
 
@@ -121,7 +118,7 @@ export default function RegisterPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-              placeholder="••••••••"
+              placeholder="********"
             />
           </div>
 

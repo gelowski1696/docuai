@@ -49,7 +49,7 @@ export default function TierEditor({ userId, currentTier }: { userId: string; cu
           </div>
         </div>
       )}
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center max-sm:flex-col max-sm:items-stretch justify-end gap-2">
         <select
           value={selectedTier}
           onChange={(e) => setSelectedTier(e.target.value)}

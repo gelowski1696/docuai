@@ -33,7 +33,7 @@ export default function SupportForm() {
   };
 
   return (
-    <div className="glass rounded-[3rem] p-8 md:p-12 border border-border/50 shadow-2xl relative">
+    <div className="glass rounded-[2rem] sm:rounded-[3rem] p-5 sm:p-8 md:p-12 border border-border/50 shadow-2xl relative">
       {message && (
         <div className={`mb-8 p-6 rounded-2xl border ${
           message.type === 'success' 
@@ -53,8 +53,8 @@ export default function SupportForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8">
           <div className="space-y-3">
             <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Submission Type</label>
             <div className="flex p-1.5 bg-gray-100 dark:bg-gray-800/50 rounded-2xl">
@@ -120,7 +120,7 @@ export default function SupportForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-20 rounded-[2rem] bg-primary text-white font-black text-xl shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all duration-300 active:scale-[0.98] flex items-center justify-center disabled:opacity-50"
+          className="w-full h-16 sm:h-20 rounded-[1.25rem] sm:rounded-[2rem] bg-primary text-white font-black text-lg sm:text-xl shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all duration-300 active:scale-[0.98] flex items-center justify-center disabled:opacity-50"
         >
           {loading ? (
             <svg className="animate-spin h-6 w-6 text-white" fill="none" viewBox="0 0 24 24">

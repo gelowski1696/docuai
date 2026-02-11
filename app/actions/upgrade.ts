@@ -18,6 +18,12 @@ export interface ChangeSubscriptionInput {
 export async function changeSubscriptionTier(input: SubscriptionTier | ChangeSubscriptionInput) {
   try {
     const user = await requireAuth();
+    if (user.role !== 'ADMIN') {
+      return {
+        success: false,
+        error: 'Self-service plan changes are disabled. Please contact an administrator.',
+      };
+    }
 
     const tier = typeof input === 'string' ? input : input.tier;
     const billingCycle = typeof input === 'string' ? 'MONTHLY' : (input.billingCycle || 'MONTHLY');

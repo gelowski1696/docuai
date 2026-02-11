@@ -14,14 +14,14 @@ export default async function AdminUsersPage() {
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header>
-        <h1 className="text-4xl font-black tracking-tight mb-4">
+        <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-4">
           User <span className="gradient-text">Management</span>
         </h1>
-        <p className="text-gray-500 dark:text-gray-400 text-lg">Control access and monitor activity across all accounts.</p>
+        <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg">Control access and monitor activity across all accounts.</p>
       </header>
 
       <div className="glass rounded-[2.5rem] border border-border/50 overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full divide-y divide-border/30">
             <thead>
               <tr className="bg-background/20">
@@ -79,6 +79,64 @@ export default async function AdminUsersPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="md:hidden p-4 space-y-3">
+          {users.map((user) => (
+            <div key={user.id} className="rounded-2xl border border-border/40 bg-white/40 dark:bg-slate-900/40 p-4 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black">
+                  {user.email[0].toUpperCase()}
+                </div>
+                <div className="font-bold text-sm truncate">{user.email}</div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <div className="text-gray-400 font-black uppercase tracking-widest mb-1">Tier</div>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-widest ${
+                    user.subscriptionTier === 'PRO'
+                      ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                      : user.subscriptionTier === 'ENTERPRISE'
+                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                        : user.subscriptionTier === 'STARTER'
+                          ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30'
+                          : 'bg-slate-500/10 text-slate-600 border-slate-500/30'
+                  }`}>
+                    {user.subscriptionTier}
+                  </span>
+                </div>
+
+                <div>
+                  <div className="text-gray-400 font-black uppercase tracking-widest mb-1">Role</div>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-widest ${
+                    user.role === 'ADMIN'
+                      ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
+                      : 'bg-blue-500/10 text-blue-600 border-blue-500/30'
+                  }`}>
+                    {user.role}
+                  </span>
+                </div>
+
+                <div>
+                  <div className="text-gray-400 font-black uppercase tracking-widest mb-1">Docs</div>
+                  <div className="font-bold text-sm">{user._count.documents}</div>
+                </div>
+
+                <div>
+                  <div className="text-gray-400 font-black uppercase tracking-widest mb-1">Joined</div>
+                  <div className="font-medium text-sm text-gray-600 dark:text-gray-300">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-gray-400 font-black uppercase tracking-widest text-[10px] mb-2">Tier Edit</div>
+                <TierEditor userId={user.id} currentTier={user.subscriptionTier} />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

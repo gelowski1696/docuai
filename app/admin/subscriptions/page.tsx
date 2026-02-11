@@ -32,7 +32,7 @@ export default function AdminSubscriptionsPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-4xl font-black mb-2 dark:text-white">User Subscriptions</h1>
+          <h1 className="text-3xl sm:text-4xl font-black mb-2 dark:text-white">User Subscriptions</h1>
           <p className="text-gray-500 dark:text-gray-400 font-medium">Monitor user tiers and monthly usage limits.</p>
         </div>
         
@@ -57,7 +57,7 @@ export default function AdminSubscriptionsPage() {
       )}
 
       <div className="glass rounded-[2.5rem] border border-border/50 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border/50 bg-gray-50/50 dark:bg-slate-800/50">
@@ -129,6 +129,59 @@ export default function AdminSubscriptionsPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="md:hidden p-4 space-y-3">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-2xl border border-border/30 p-4 space-y-3">
+                <div className="h-4 bg-gray-200 dark:bg-slate-800 rounded w-3/4" />
+                <div className="h-4 bg-gray-200 dark:bg-slate-800 rounded w-1/2" />
+                <div className="h-2 bg-gray-200 dark:bg-slate-800 rounded w-full" />
+              </div>
+            ))
+          ) : filteredUsers.length === 0 ? (
+            <div className="px-4 py-10 text-center text-gray-500 font-medium">
+              No users found matching your search.
+            </div>
+          ) : (
+            filteredUsers.map((user) => (
+              <div key={user.id} className="rounded-2xl border border-border/40 bg-white/40 dark:bg-slate-900/40 p-4 space-y-3">
+                <div className="font-bold dark:text-white truncate">{user.email}</div>
+                <div className="flex items-center justify-between gap-3">
+                  <span
+                    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                      user.subscriptionTier === 'PRO'
+                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                        : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
+                    }`}
+                  >
+                    {user.subscriptionTier}
+                  </span>
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{user.role}</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="w-full h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-1000 ${
+                        user.subscriptionTier === 'FREE' && user.usageCount >= 2 ? 'bg-red-500' : 'bg-primary'
+                      }`}
+                      style={{
+                        width: `${user.subscriptionTier === 'FREE' ? Math.min((user.usageCount / 2) * 100, 100) : 100}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="text-xs font-black text-gray-700 dark:text-gray-300">
+                    {user.usageCount}
+                    {user.subscriptionTier === 'FREE' ? '/2' : ' (Unlimited)'}
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-500">
+                  Joined {new Date(user.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

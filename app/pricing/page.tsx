@@ -27,6 +27,7 @@ interface PricingSubscription {
 export default function PricingPage() {
   const [subscription, setSubscription] = useState<PricingSubscription | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [upgradingTier, setUpgradingTier] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('MONTHLY');
@@ -39,6 +40,7 @@ export default function PricingPage() {
       const session = await getSession();
       const loggedIn = Boolean(session);
       setIsAuthenticated(loggedIn);
+      setIsAdmin(session?.role === 'ADMIN');
 
       if (loggedIn) {
         const subRes = await getSubscription();
@@ -69,6 +71,13 @@ export default function PricingPage() {
       setNotification({
         type: 'error',
         message: 'Please login first to change your subscription.',
+      });
+      return;
+    }
+    if (!isAdmin) {
+      setNotification({
+        type: 'error',
+        message: 'Plan changes are managed by administrators. Please contact support/admin.',
       });
       return;
     }
@@ -142,7 +151,7 @@ export default function PricingPage() {
     <div className="min-h-screen bg-background dark:bg-[#0a0f1e] text-foreground transition-all duration-500 overflow-x-hidden">
       {notification && (
         <div
-          className={`fixed bottom-8 right-8 z-[110] px-6 py-4 rounded-2xl shadow-2xl border animate-in slide-in-from-right-10 duration-500 ${
+          className={`fixed bottom-4 right-4 left-4 sm:left-auto sm:bottom-8 sm:right-8 z-[110] px-4 sm:px-6 py-4 rounded-2xl shadow-2xl border animate-in slide-in-from-right-10 duration-500 ${
             notification.type === 'success'
               ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/40 dark:border-emerald-800 dark:text-emerald-400'
               : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/40 dark:border-red-800 dark:text-red-400'
@@ -163,18 +172,18 @@ export default function PricingPage() {
         </div>
       )}
 
-      <main className="relative pt-32 pb-32 px-4 md:px-8 max-w-7xl mx-auto">
+      <main className="relative pt-24 sm:pt-28 md:pt-32 pb-16 sm:pb-24 md:pb-32 px-4 md:px-8 max-w-7xl mx-auto">
         <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[140px] -z-10 animate-pulse"></div>
         <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] -z-10"></div>
 
-        <div className="text-center mb-24 space-y-6">
-          <h1 className="text-6xl md:text-8xl font-black tracking-tight dark:text-white">
+        <div className="text-center mb-12 sm:mb-20 md:mb-24 space-y-4 sm:space-y-6">
+          <h1 className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tight dark:text-white">
             Plans for <span className="gradient-text">Everyone</span>
           </h1>
-          <p className="text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed font-medium">
+          <p className="text-base sm:text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed font-medium">
             Scale your document workflow with transparent PHP pricing and predictable limits.
           </p>
-          <div className="inline-flex items-center p-1 rounded-2xl border border-border/50 bg-white/60 dark:bg-slate-900/60">
+          <div className="inline-flex max-sm:flex-wrap max-sm:justify-center items-center gap-1 p-1 rounded-2xl border border-border/50 bg-white/60 dark:bg-slate-900/60">
             <button
               onClick={() => setBillingCycle('MONTHLY')}
               disabled={loading}
@@ -193,17 +202,17 @@ export default function PricingPage() {
             >
               Annual
             </button>
-            <span className="ml-3 mr-2 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+            <span className="ml-1 sm:ml-3 mr-1 sm:mr-2 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
               Save 20%
             </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-8">
           {tiers.map((tier) => (
             <div
               key={tier.id}
-              className={`glass rounded-[3rem] p-8 border-2 flex flex-col items-start relative overflow-hidden group transition-all duration-500 ${
+              className={`glass rounded-[2rem] sm:rounded-[3rem] p-5 sm:p-8 border-2 flex flex-col items-start relative overflow-hidden group transition-all duration-500 ${
                 tier.recommended
                   ? 'border-primary shadow-2xl shadow-primary/20 scale-105 z-10'
                   : 'border-border/50 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5'
@@ -252,6 +261,7 @@ export default function PricingPage() {
                 disabled={
                   loading ||
                   !isAuthenticated ||
+                  !isAdmin ||
                   subscription?.tier === tier.id ||
                   tier.id === 'FREE' ||
                   !!upgradingTier
@@ -266,6 +276,8 @@ export default function PricingPage() {
                   ? 'Loading...'
                   : !isAuthenticated
                   ? 'Login to Upgrade'
+                  : !isAdmin
+                  ? 'Contact Admin'
                   : upgradingTier === tier.id
                   ? 'Processing...'
                   : subscription?.tier === tier.id
@@ -278,9 +290,9 @@ export default function PricingPage() {
           ))}
         </div>
 
-        <section className="mt-20 glass rounded-[2rem] border border-border/50 p-8 md:p-10">
+        <section className="mt-12 sm:mt-20 glass rounded-[2rem] border border-border/50 p-5 sm:p-8 md:p-10">
           <h2 className="text-2xl md:text-3xl font-black mb-6">Plan Comparison</h2>
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-400 uppercase tracking-widest text-[10px]">
@@ -323,6 +335,45 @@ export default function PricingPage() {
               </tbody>
             </table>
           </div>
+
+          <div className="md:hidden space-y-3">
+            <div className="rounded-2xl border border-border/40 p-4">
+              <div className="font-black mb-2">Free</div>
+              <ul className="text-sm space-y-1 text-gray-600 dark:text-gray-300">
+                <li>3 monthly generations</li>
+                <li>No XLSX export</li>
+                <li>Basic templates</li>
+                <li>Standard support</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-border/40 p-4">
+              <div className="font-black mb-2">Starter</div>
+              <ul className="text-sm space-y-1 text-gray-600 dark:text-gray-300">
+                <li>15 monthly generations</li>
+                <li>XLSX export enabled</li>
+                <li>Core premium templates</li>
+                <li>Email support</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-border/40 p-4">
+              <div className="font-black mb-2">Pro</div>
+              <ul className="text-sm space-y-1 text-gray-600 dark:text-gray-300">
+                <li>50 monthly generations</li>
+                <li>XLSX export enabled</li>
+                <li>All premium templates</li>
+                <li>24/7 priority support</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-border/40 p-4">
+              <div className="font-black mb-2">Enterprise</div>
+              <ul className="text-sm space-y-1 text-gray-600 dark:text-gray-300">
+                <li>200 monthly generations</li>
+                <li>XLSX export enabled</li>
+                <li>All + custom templates</li>
+                <li>Dedicated manager</li>
+              </ul>
+            </div>
+          </div>
         </section>
 
         <section className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -333,9 +384,11 @@ export default function PricingPage() {
           <div className="glass rounded-3xl border border-border/50 p-6">
             <div className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Upgrades</div>
             <p className="font-semibold text-gray-600 dark:text-gray-300">
-              {isAuthenticated
-                ? 'Upgrade takes effect instantly after confirmation.'
-                : 'Login is required before changing your plan.'}
+              {!isAuthenticated
+                ? 'Login is required before managing your plan.'
+                : isAdmin
+                ? 'Admins can apply tier changes instantly.'
+                : 'Pricing is visible, but only admins can change subscription tiers.'}
             </p>
           </div>
           <div className="glass rounded-3xl border border-border/50 p-6">
