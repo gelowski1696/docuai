@@ -1,57 +1,60 @@
-# DocuAI - Enterprise-Grade AI Document Workspace
+# DocuAI Next.js
 
-DocuAI is a powerful, full-stack application designed to transform raw data into professional documents (Invoices, Reports, Memos) using state-of-the-art AI.
+DocuAI is a Next.js 16 application for AI-assisted document generation (PDF, DOCX, XLSX) with role-based access control.
 
-## ✨ Core Features
-- **Intelligent Generation**: Seamlessly generate PDF, DOCX, and XLSX documents.
-- **AI Hub**: Support for multiple providers including OpenAI, Google Gemini, and local Ollama.
-- **Enterprise Admin Suite**: Real-time analytics, user management, and dynamic template management.
-- **Ultra-Premium UI**: Glassmorphism design system with perfect dark mode support and micro-animations.
-- **Secure by Default**: JWT-based authentication with Role-Based Access Control (RBAC).
+## Stack
+- Next.js 16 (App Router, Server Actions)
+- Prisma + SQLite (default deployment mode)
+- JWT cookie auth (`auth-token`) in SQLite mode
+- Optional PostgreSQL + Supabase fallback mode
 
-## 🚀 Technical Stack
-- **Framework**: [Next.js 16](https://nextjs.org/) (App Router, Turbopack)
-- **Database**: [Prisma](https://www.prisma.io/) with SQLite (Dev) & PostgreSQL (Prod)
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
-- **Authentication**: Custom JWT Middleware
-- **AI Integration**: OpenAI SDK, Google Generative AI, and local Ollama API
-- **Generators**: `docx` (Word), `puppeteer` (PDF), `exceljs` (Excel)
+## Default Runtime Mode
+Primary mode is **SQLite + JWT**:
+- `DATABASE_PROVIDER=sqlite`
+- `DATABASE_URL=file:./dev.db` (local) or `file:/app/data/dev.db` (Docker)
+- `JWT_SECRET=<strong-random-secret>`
 
-## 🛠️ Quick Start
+Supabase variables are optional and only needed when `DATABASE_PROVIDER=postgresql`.
 
-### 1. Installation
-```powershell
+## Local Development
+1. Install dependencies:
+```bash
 npm install
 ```
-
-### 2. Environment Setup
-Create a `.env` file in the root:
-```env
-DATABASE_URL="file:./dev.db"
-JWT_SECRET="your-super-secret-key"
-AI_PROVIDER="ollama" # or "openai", "gemini"
-OLLAMA_BASE_URL="http://localhost:11434"
-OPENAI_API_KEY="sk-..."
-GOOGLE_API_KEY="AIza..."
-```
-
-### 3. Database Initialization
-```powershell
-npx prisma migrate dev
+2. Create `.env` from `.env.example` and set `JWT_SECRET`.
+3. Initialize database:
+```bash
+npx prisma generate
+npx prisma db push
 npx tsx prisma/seed.ts
 ```
-
-### 4. Run Development Server
-```powershell
+4. Run:
+```bash
 npm run dev
 ```
 
-## 📂 Architecture Overview
-- `app/`: Next.js App Router routes and Server Actions.
-- `components/`: Reusable UI components.
-- `lib/`: Core service layers (AI factory, generators, auth).
-- `prisma/`: Database schema and seeding logic.
-- `public/`: Static assets and generated files.
+## Docker (Ubuntu VPS target)
+The compose setup runs with persistent named volumes:
+- `docuai-data` -> `/app/data` (SQLite DB)
+- `docuai-uploads` -> `/app/uploads` (generated files)
 
-## 🤝 License
-Licensed under the MIT License.
+Use:
+```bash
+docker compose up -d --build
+docker compose logs -f
+```
+
+Set production env in `.env.docker`:
+- `JWT_SECRET` must be changed before production.
+- `AI_PROVIDER` and its API key must be configured.
+
+## Database Mode Switching
+Use scripts:
+- `npm run db:sqlite`
+- `npm run db:postgres`
+
+`db:postgres` rewrites `prisma/schema.prisma` from `prisma/schema.postgres.prisma` and expects Supabase/PostgreSQL variables.
+
+## Security Notes
+- Rotate any previously exposed secrets before deployment.
+- Run behind HTTPS reverse proxy (Nginx/Caddy) on VPS so secure cookies are enforced in production.

@@ -84,8 +84,8 @@ COPY --from=builder /app/package.json ./package.json
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
-# Create directory for SQLite database with proper permissions
-RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+# Create directories for persistent runtime data.
+RUN mkdir -p /app/data /app/uploads && chown -R nextjs:nodejs /app/data /app/uploads
 RUN chown -R nextjs:nodejs /app
 
 # Set user

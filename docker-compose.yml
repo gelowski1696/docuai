@@ -11,8 +11,10 @@ services:
     volumes:
       # Persist SQLite database
       - docuai-data:/app/data
+      # Persist generated files
+      - docuai-uploads:/app/uploads
     env_file:
-      - .env
+      - .env.docker
     environment:
       # Override database path for Docker
       - DATABASE_URL=file:/app/data/dev.db
@@ -27,5 +29,7 @@ services:
 
 volumes:
   docuai-data:
+    driver: local
+  docuai-uploads:
     driver: local
 

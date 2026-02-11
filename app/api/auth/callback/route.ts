@@ -2,6 +2,10 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
+  if (process.env.DATABASE_PROVIDER !== 'postgresql') {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
   // if "next" is in param, use it as the redirect URL

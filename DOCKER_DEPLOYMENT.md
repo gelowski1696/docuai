@@ -1,194 +1,99 @@
-# Docker Deployment Guide
+# Docker Deployment Guide (Ubuntu 24.04 VPS)
 
-## Quick Start
+## Deployment Mode
+This guide targets:
+- SQLite database
+- JWT auth
+- Docker named volumes for persistent DB and files
+- HTTPS access through reverse proxy
 
-### Prerequisites
-- Docker installed ([Get Docker](https://docs.docker.com/get-docker/))
-- Docker Compose installed (included with Docker Desktop)
+## Prerequisites
+- Ubuntu 24.04 LTS VPS
+- Docker Engine + Docker Compose plugin installed
+- Domain name pointing to VPS
+- Nginx or Caddy for TLS termination
 
-### 1. Build and Run
+## 1) Configure Environment
+Use `.env.docker` (already referenced by `docker-compose.yml`).
 
+Required:
+- `DATABASE_PROVIDER=sqlite`
+- `DATABASE_URL=file:/app/data/dev.db`
+- `JWT_SECRET=<long-random-secret>`
+- `AI_PROVIDER=<ollama|openai|gemini>`
+- Provider API key(s)
+
+Optional (only for fallback postgres mode):
+- `DATABASE_URL_POSTGRES`
+- `DATABASE_URL_POSTGRES_POOLER`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+## 2) Start Services
 ```bash
-# Build and start the container
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
+docker compose up -d --build
+docker compose ps
+docker compose logs -f
 ```
 
-The application will be available at `http://localhost:3000`
+Container startup automatically:
+- creates/syncs SQLite schema (`prisma db push`)
+- seeds initial data on first run
 
-### 2. First-Time Setup
+## 3) Persistent Data
+Two named volumes are used:
+- `docuai-data` -> `/app/data` (SQLite DB)
+- `docuai-uploads` -> `/app/uploads` (generated documents)
 
-The container automatically:
-- ✅ Creates the SQLite database
-- ✅ Runs migrations
-- ✅ Seeds admin account
+Data survives container restarts and image rebuilds.
 
-**Default Login:**
-- Email: `admin@docuai.com`
-- Password: `admin123`
-
-## Configuration
-
-### Environment Variables
-
-Edit `docker-compose.yml` to configure:
-
-```yaml
-environment:
-  # JWT Secret (CHANGE THIS!)
-  - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-  
-  # AI Provider Keys
-  - OPENAI_API_KEY=your-key-here
-  - GEMINI_API_KEY=your-key-here
-```
-
-### Port Configuration
-
-To use a different port, edit `docker-compose.yml`:
-
-```yaml
-ports:
-  - "8080:3000"  # Access on port 8080
-```
-
-## Common Commands
-
+## 4) Backups
+### Backup DB
 ```bash
-# Start container
-docker-compose up -d
-
-# Stop container
-docker-compose down
-
-# View logs
-docker-compose logs -f
-
-# Restart container
-docker-compose restart
-
-# Rebuild after code changes
-docker-compose up -d --build
-
-# Access container shell
-docker-compose exec docuai sh
-
-# Seed database manually
-docker-compose exec docuai npx tsx prisma/seed-sqlite.ts
+docker cp docuai-app:/app/data/dev.db ./backup-dev.db
 ```
 
-## Data Persistence
-
-The SQLite database is stored in a Docker volume named `docuai-data`. This ensures your data persists even if you:
-- Stop the container
-- Remove the container
-- Rebuild the image
-
-### Backup Database
-
+### Restore DB
 ```bash
-# Copy database from container
-docker cp docuai-app:/app/data/dev.db ./backup.db
+docker cp ./backup-dev.db docuai-app:/app/data/dev.db
+docker compose restart
 ```
 
-### Restore Database
-
+### Backup uploads
 ```bash
-# Copy database to container
-docker cp ./backup.db docuai-app:/app/data/dev.db
-
-# Restart container
-docker-compose restart
+docker cp docuai-app:/app/uploads ./backup-uploads
 ```
 
-## Deployment to Another Computer
-
-### Method 1: Using Docker Compose (Recommended)
-
-1. Copy these files to the target computer:
-   - `Dockerfile`
-   - `docker-compose.yml`
-   - `.dockerignore`
-   - `docker-entrypoint.sh`
-   - Entire project directory
-
-2. Run:
-   ```bash
-   docker-compose up -d
-   ```
-
-### Method 2: Using Docker Image
-
-1. Build and save image:
-   ```bash
-   docker build -t docuai:latest .
-   docker save docuai:latest > docuai-image.tar
-   ```
-
-2. Transfer `docuai-image.tar` to target computer
-
-3. Load and run:
-   ```bash
-   docker load < docuai-image.tar
-   docker run -d -p 3000:3000 -v docuai-data:/app/data docuai:latest
-   ```
-
-## Troubleshooting
-
-### Container won't start
-
+### Restore uploads
 ```bash
-# Check logs
-docker-compose logs
-
-# Check container status
-docker-compose ps
+docker cp ./backup-uploads/. docuai-app:/app/uploads
+docker compose restart
 ```
 
-### Database issues
+## 5) Reverse Proxy + HTTPS
+Run DocuAI on internal port `3000` and terminate TLS at Nginx/Caddy.
 
-```bash
-# Reset database (WARNING: deletes all data)
-docker-compose down -v
-docker-compose up -d
-```
+Production cookie behavior expects HTTPS (`secure` cookies enabled in production mode).
 
-### Port already in use
+## 6) Health Check
+App exposes `GET /api/health`.
 
-```bash
-# Use different port in docker-compose.yml
-ports:
-  - "3001:3000"
-```
-
-### Can't login
-
-```bash
-# Reseed database
-docker-compose exec docuai npx tsx prisma/seed-sqlite.ts
-```
-
-## Production Recommendations
-
-1. **Change JWT_SECRET**: Use a strong random string
-2. **Use HTTPS**: Put behind a reverse proxy (nginx, Caddy)
-3. **Regular Backups**: Backup the database volume regularly
-4. **Resource Limits**: Add resource limits in docker-compose.yml:
-   ```yaml
-   deploy:
-     resources:
-       limits:
-         cpus: '1'
-         memory: 1G
-   ```
-
-## Health Check
-
-The container includes a health check endpoint at `/api/health`. Docker automatically monitors this to ensure the application is running properly.
-
-Check health status:
+Check container health:
 ```bash
 docker inspect --format='{{.State.Health.Status}}' docuai-app
 ```
+
+## 7) Common Operations
+```bash
+docker compose restart
+docker compose down
+docker compose up -d --build
+docker compose exec docuai sh
+```
+
+## 8) Security Checklist
+- Rotate `JWT_SECRET` before going live.
+- Rotate any previously exposed Supabase/JWT/API secrets.
+- Keep `.env`/`.env.docker` out of Git.
+- Expose only reverse proxy ports publicly.

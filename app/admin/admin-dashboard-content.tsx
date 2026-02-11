@@ -5,7 +5,7 @@ type TemplateAggregateRow = {
   id: string;
   name: string;
   count: number;
-  totalTokens: bigint | number | null;
+  totalTokens: number;
 };
 
 export default async function AdminDashboard() {
@@ -52,37 +52,49 @@ export default async function AdminDashboard() {
 
   const potentialMrr = mrr + (tierCounts.FREE * PRICING.STARTER);
 
-  // Use one aggregated query to avoid high Prisma connection fan-out.
-  const templateRows = await prisma.$queryRaw<TemplateAggregateRow[]>`
-    SELECT
-      t."id" AS "id",
-      t."name" AS "name",
-      COUNT(d."id")::int AS "count",
-      COALESCE(SUM(u."tokensUsed"), 0)::bigint AS "totalTokens"
-    FROM "Template" t
-    LEFT JOIN "Document" d ON d."templateId" = t."id"
-    LEFT JOIN "Usage" u ON u."documentId" = d."id"
-    WHERE t."isActive" = true
-    GROUP BY t."id", t."name"
-    ORDER BY COUNT(d."id") DESC
-    LIMIT 5
-  `;
+  // Cross-database aggregation (SQLite + PostgreSQL) without raw SQL casting syntax.
+  const activeTemplates = await prisma.template.findMany({
+    where: { isActive: true },
+    select: {
+      id: true,
+      name: true,
+      documents: {
+        select: {
+          id: true,
+          usage: {
+            select: {
+              tokensUsed: true,
+            },
+          },
+        },
+      },
+    },
+  });
 
-  const topTemplates = templateRows.map((row) => {
-    const count = Number(row.count ?? 0);
-    const totalTokensRaw = row.totalTokens ?? 0;
-    const totalTokensForTemplate = typeof totalTokensRaw === 'bigint'
-      ? Number(totalTokensRaw)
-      : Number(totalTokensRaw);
+  const templateRows: TemplateAggregateRow[] = activeTemplates.map((template) => {
+    const count = template.documents.length;
+    const totalTokensForTemplate = template.documents.reduce((templateSum, document) => {
+      const docTokens = document.usage.reduce((docSum, usageRow) => docSum + usageRow.tokensUsed, 0);
+      return templateSum + docTokens;
+    }, 0);
 
     return {
-      id: row.id,
-      name: row.name,
+      id: template.id,
+      name: template.name,
       count,
-      avgTokens: count > 0 ? Math.round(totalTokensForTemplate / count) : 0,
       totalTokens: totalTokensForTemplate,
     };
   });
+
+  templateRows.sort((a, b) => b.count - a.count);
+
+  const topTemplates = templateRows.slice(0, 5).map((row) => ({
+    id: row.id,
+    name: row.name,
+    count: row.count,
+    avgTokens: row.count > 0 ? Math.round(row.totalTokens / row.count) : 0,
+    totalTokens: row.totalTokens,
+  }));
 
   const maxCount = Math.max(...topTemplates.map(t => t.count), 1);
 
