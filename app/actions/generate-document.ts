@@ -32,6 +32,97 @@ export interface GenerateDocumentResult {
   error?: string;
 }
 
+function splitLines(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v).trim()).filter(Boolean);
+  }
+  if (typeof value !== 'string') return [];
+  return value
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function normalizeTemplateInput(templateType: string, rawInput: any): any {
+  const input = rawInput && typeof rawInput === 'object' ? rawInput : {};
+
+  switch (templateType.toUpperCase()) {
+    case 'INVOICE':
+      return {
+        clientName: input.clientName || '',
+        clientAddress: input.clientAddress || '',
+        invoiceNumber: input.invoiceNumber || '',
+        invoiceDate: input.invoiceDate || '',
+        dueDate: input.dueDate || '',
+        items:
+          Array.isArray(input.items) && input.items.length > 0
+            ? input.items
+            : splitLines(input.itemsText).map((description) => ({ description })),
+      };
+    case 'REPORT':
+      return {
+        title: input.title || '',
+        dateRange: input.dateRange || '',
+        department: input.department || '',
+        keyPoints:
+          Array.isArray(input.keyPoints) && input.keyPoints.length > 0
+            ? input.keyPoints
+            : splitLines(input.keyPointsText),
+      };
+    case 'CONTENT':
+      return {
+        title: input.title || '',
+        topic: input.topic || '',
+        targetAudience: input.targetAudience || '',
+        tone: input.tone || '',
+        keyPoints:
+          Array.isArray(input.keyPoints) && input.keyPoints.length > 0
+            ? input.keyPoints
+            : splitLines(input.keyPointsText),
+      };
+    case 'PROJECT_PROPOSAL':
+      return {
+        projectTitle: input.projectTitle || input.title || '',
+        clientName: input.clientName || input.client || '',
+        goals: input.goals || input.goalsText || '',
+        scope: input.scope || input.scopeText || '',
+        timeline: input.timeline || input.timelineText || '',
+        budget: input.budget || '',
+      };
+    case 'PRODUCT_SPEC':
+      return {
+        productName: input.productName || '',
+        objectives: input.objectives || input.objectivesText || '',
+        userStories: input.userStories || input.userStoriesText || '',
+        requirements:
+          input.requirements || input.functionalRequirements || input.functionalRequirementsText || '',
+        successMetrics: input.successMetrics || input.successMetricsText || '',
+      };
+    case 'PRESS_RELEASE':
+      return {
+        headline: input.headline || '',
+        locationDate: input.locationDate || '',
+        leadParagraph: input.leadParagraph || input.lead || '',
+        bodyContent:
+          input.bodyContent ||
+          [input.bodyText, input.quote1Text, input.partnerQuoteText].filter(Boolean).join('\n'),
+        companyInfo: input.companyInfo || input.boilerplate || '',
+        contactMedia: input.contactMedia || input.contact || '',
+      };
+    case 'CASE_STUDY':
+      return {
+        projectTitle: input.projectTitle || '',
+        clientName: input.clientName || input.client || '',
+        challenge: input.challenge || input.theChallenge || '',
+        solution: input.solution || input.theSolution || '',
+        results: input.results || input.theResultsText || input.result || '',
+      };
+    default:
+      // For template types already aligned, preserve as-is.
+      return input;
+  }
+}
+
 export async function generateDocument(
   input: GenerateDocumentInput
 ): Promise<GenerateDocumentResult> {
@@ -57,13 +148,15 @@ export async function generateDocument(
       return { success: false, error: 'Template not found or inactive' };
     }
 
+    const normalizedInput = normalizeTemplateInput(template.type, input.userInput);
+
     // 3. Create a processing placeholder record instantly
     const document = await prisma.document.create({
       data: {
         userId: user.id,
         templateId: template.id,
         content: '', // Placeholder
-        metadata: JSON.stringify(input.userInput),
+        metadata: JSON.stringify(normalizedInput),
         fileUrl: '', // Placeholder
         format: input.format,
         status: 'PROCESSING',
@@ -77,7 +170,7 @@ export async function generateDocument(
         // Build AI prompt
         const { systemPrompt, userPrompt } = buildPromptForTemplate(
           template.type,
-          input.userInput,
+          normalizedInput,
           input.tone
         );
 
