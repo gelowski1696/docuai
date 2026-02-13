@@ -129,7 +129,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
               >
-                <span>{'\\u{1F4C1}'}</span>
+                <span>{'\u{1F4C1}'}</span>
                 <span>All Templates</span>
                 <span className="ml-auto text-xs opacity-70">{templates.length}</span>
               </button>
@@ -196,7 +196,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
               <button
                 onClick={() => handleSearchChange('')}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >{'\\u00D7'}</button>
+              >{'\u00D7'}</button>
             )}
           </div>
 
@@ -233,7 +233,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
               onClick={() => handleCategoryChange(null)}
               className="text-primary hover:underline flex items-center gap-1"
             >
-              Clear filters {'\\u00D7'}
+              Clear filters {'\u00D7'}
             </button>
           )}
         </div>
@@ -261,7 +261,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
 
                   {/* Icon */}
                   <div className="w-12 h-12 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/40 dark:to-purple-900/40 rounded-xl flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">
-                    {TEMPLATE_ICONS[template.type] || '\\u{1F4C4}'}
+                    {TEMPLATE_ICONS[template.type] || '\u{1F4C4}'}
                   </div>
 
                   {/* Name */}
@@ -278,7 +278,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
                   {isLocked && (
                     <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-900/50 rounded-2xl">
                       <span className="text-xs font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/50 px-3 py-1 rounded-full">
-                        {'\\u{1F512}'} Upgrade
+                        {'\u{1F512}'} Upgrade
                       </span>
                     </div>
                   )}
@@ -304,7 +304,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
                 >
                   {/* Icon */}
                   <div className="w-10 h-10 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/40 dark:to-purple-900/40 rounded-lg flex items-center justify-center text-xl flex-shrink-0">
-                    {TEMPLATE_ICONS[template.type] || '\\u{1F4C4}'}
+                    {TEMPLATE_ICONS[template.type] || '\u{1F4C4}'}
                   </div>
 
                   {/* Info */}
