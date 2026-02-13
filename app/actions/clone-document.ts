@@ -8,6 +8,7 @@ import { buildPromptForTemplate } from '@/lib/ai/prompts';
 import { generateDocx } from '@/lib/generators/docx';
 import { generatePdf } from '@/lib/generators/pdf';
 import { generateXlsx } from '@/lib/generators/xlsx';
+import { resolveDesignForGeneration } from '@/lib/generators/design/resolve-design';
 import { saveFile, generateFilename } from '@/lib/storage';
 import { revalidatePath } from 'next/cache';
 import { after } from 'next/server';
@@ -47,6 +48,14 @@ export async function cloneDocument(originalDocumentId: string): Promise<CloneDo
 
     // Parse original metadata to get user input
     const userInput = JSON.parse(original.metadata);
+    const clonedFormat = original.format as 'DOCX' | 'PDF' | 'XLSX';
+    const resolvedDesign =
+      clonedFormat === 'XLSX'
+        ? null
+        : await resolveDesignForGeneration({
+            requestedDesignTemplateId: original.designTemplateId || undefined,
+            format: clonedFormat,
+          });
 
     // Create new processing document
     const clonedDocument = await prisma.document.create({
@@ -59,6 +68,7 @@ export async function cloneDocument(originalDocumentId: string): Promise<CloneDo
         format: original.format,
         status: 'PROCESSING',
         tone: (original as any).tone,
+        designTemplateId: resolvedDesign?.id !== 'system-fallback' ? resolvedDesign?.id : original.designTemplateId,
         tags: (original as any).tags,
         isFavorite: false,
       },
@@ -86,10 +96,10 @@ export async function cloneDocument(originalDocumentId: string): Promise<CloneDo
         let fileBuffer: Buffer;
         switch (original.format) {
           case 'DOCX':
-            fileBuffer = await generateDocx(aiContent, original.template.type);
+            fileBuffer = await generateDocx(aiContent, original.template.type, resolvedDesign || undefined);
             break;
           case 'PDF':
-            fileBuffer = await generatePdf(aiContent, original.template.type);
+            fileBuffer = await generatePdf(aiContent, original.template.type, resolvedDesign || undefined);
             break;
           case 'XLSX':
             fileBuffer = await generateXlsx(aiContent, original.template.type);

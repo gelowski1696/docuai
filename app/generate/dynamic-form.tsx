@@ -74,10 +74,13 @@ export default function DynamicTemplateForm({
                 value={formData[field.name] || ''}
                 onChange={(e) => handleChange(field.name, e.target.value)}
                 className={`${inputBaseClass} p-6 rounded-[2rem] leading-relaxed`}
-                placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}...`}
+                placeholder={field.placeholder || `What should I write for ${field.label.toLowerCase()}? Use simple words.`}
               />
               {field.hint && (
                 <p className="text-xs text-gray-400 ml-2 italic">{field.hint}</p>
+              )}
+              {!field.hint && (
+                <p className="text-xs text-gray-400 ml-2 italic">Tip: Keep this short and clear. AI will format it.</p>
               )}
             </div>
           );
@@ -99,10 +102,13 @@ export default function DynamicTemplateForm({
                   value={formData[f.name] || ''}
                   onChange={(e) => handleChange(f.name, e.target.value)}
                   className={`${inputBaseClass} h-14`}
-                  placeholder={f.placeholder || ''}
+                  placeholder={f.placeholder || `What should I write here?`}
                 />
                 {f.hint && (
                   <p className="text-xs text-gray-400 ml-2 italic">{f.hint}</p>
+                )}
+                {!f.hint && (
+                  <p className="text-xs text-gray-400 ml-2 italic">Use simple language. You can edit later.</p>
                 )}
               </div>
             ))}

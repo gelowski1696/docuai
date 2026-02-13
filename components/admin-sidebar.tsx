@@ -63,6 +63,26 @@ const adminNavItems: AdminNavItem[] = [
     kind: 'admin',
   },
   {
+    href: '/admin/designs',
+    label: 'Designs',
+    icon: (
+      <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h6m-6 4h6m2 5a2 2 0 01-2 2H7l-4 4V7a2 2 0 012-2h3m0 0V3m0 2v2" />
+      </svg>
+    ),
+    kind: 'admin',
+  },
+  {
+    href: '/admin/branding',
+    label: 'Branding',
+    icon: (
+      <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 114 4H7v-4zm0 0a4 4 0 014-4h6a4 4 0 010 8h-6" />
+      </svg>
+    ),
+    kind: 'admin',
+  },
+  {
     href: '/admin/feedback',
     label: 'User Feedback',
     icon: (

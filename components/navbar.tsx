@@ -41,6 +41,35 @@ export function Navbar({ user }: NavbarProps) {
     window.location.href = '/login';
   };
 
+  const renderTierIcon = (tier?: string, size = 'w-3.5 h-3.5') => {
+    switch (tier) {
+      case 'ENTERPRISE':
+        return (
+          <svg className={size} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l2.6 5.3 5.9.9-4.3 4.2 1 5.9L12 16.8 6.8 19.3l1-5.9L3.5 9.2l5.9-.9L12 3z" />
+          </svg>
+        );
+      case 'PRO':
+        return (
+          <svg className={size} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        );
+      case 'STARTER':
+        return (
+          <svg className={size} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className={size} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a3 3 0 11-6 0 3 3 0 016 0zm-8 12a8 8 0 0110 0" />
+          </svg>
+        );
+    }
+  };
+
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -103,15 +132,7 @@ export function Navbar({ user }: NavbarProps) {
                               : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-500'
                       }`}
                     >
-                      <span className="text-[14px]">
-                        {user.subscriptionTier === 'ENTERPRISE'
-                          ? '??'
-                          : user.subscriptionTier === 'PRO'
-                            ? '?'
-                            : user.subscriptionTier === 'STARTER'
-                              ? '??'
-                              : '??'}
-                      </span>
+                      <span className="text-[14px]">{renderTierIcon(user.subscriptionTier)}</span>
                       <span className="text-[10px] font-black uppercase tracking-[0.1em]">{user.subscriptionTier || 'FREE'}</span>
                     </div>
                   </div>
@@ -192,15 +213,7 @@ export function Navbar({ user }: NavbarProps) {
                             : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-500'
                     }`}
                   >
-                    <span className="text-sm">
-                      {user.subscriptionTier === 'ENTERPRISE'
-                        ? '??'
-                        : user.subscriptionTier === 'PRO'
-                          ? '?'
-                          : user.subscriptionTier === 'STARTER'
-                            ? '??'
-                            : '??'}
-                    </span>
+                    <span className="text-sm">{renderTierIcon(user.subscriptionTier, 'w-4 h-4')}</span>
                     <span className="text-[10px] font-black uppercase tracking-widest">{user.subscriptionTier || 'FREE'}</span>
                   </div>
                 </div>

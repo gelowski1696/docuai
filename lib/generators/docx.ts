@@ -1,4 +1,5 @@
 import { Document, Packer, Paragraph, TextRun, Table, TableCell, TableRow, HeadingLevel, AlignmentType } from 'docx';
+import type { ResolvedDesign } from '@/lib/generators/design/resolve-design';
 
 /**
  * Generate Word (.docx) document from AI-generated content
@@ -6,51 +7,55 @@ import { Document, Packer, Paragraph, TextRun, Table, TableCell, TableRow, Headi
  * Supports Invoice, Report, and Memo templates
  */
 
-export async function generateDocx(content: any, templateType: string): Promise<Buffer> {
+export async function generateDocx(
+  content: any,
+  templateType: string,
+  design?: ResolvedDesign
+): Promise<Buffer> {
   let doc: Document;
 
   switch (templateType.toUpperCase()) {
     case 'INVOICE':
-      doc = generateInvoiceDocx(content);
+      doc = generateInvoiceDocx(content, design);
       break;
     case 'REPORT':
-      doc = generateReportDocx(content);
+      doc = generateReportDocx(content, design);
       break;
     case 'MEMO':
-      doc = generateMemoDocx(content);
+      doc = generateMemoDocx(content, design);
       break;
     case 'CONTENT':
-      doc = generateContentDocx(content);
+      doc = generateContentDocx(content, design);
       break;
     case 'PRESENTATION':
-      doc = generatePresentationDocx(content);
+      doc = generatePresentationDocx(content, design);
       break;
     case 'RESUME':
-      doc = generateResumeDocx(content);
+      doc = generateResumeDocx(content, design);
       break;
     case 'LEGAL_CONTRACT':
-      doc = generateContractDocx(content);
+      doc = generateContractDocx(content, design);
       break;
     case 'NEWSLETTER':
-      doc = generateNewsletterDocx(content);
+      doc = generateNewsletterDocx(content, design);
       break;
     case 'MEETING_MINUTES':
-      doc = generateMinutesDocx(content);
+      doc = generateMinutesDocx(content, design);
       break;
     case 'PROJECT_PROPOSAL':
-      doc = generateProposalDocx(content);
+      doc = generateProposalDocx(content, design);
       break;
     case 'PRODUCT_SPEC':
-      doc = generatePRDDocx(content);
+      doc = generatePRDDocx(content, design);
       break;
     case 'PRESS_RELEASE':
-      doc = generatePressReleaseDocx(content);
+      doc = generatePressReleaseDocx(content, design);
       break;
     case 'CASE_STUDY':
-      doc = generateCaseStudyDocx(content);
+      doc = generateCaseStudyDocx(content, design);
       break;
     case 'EXPENSE_REPORT':
-      doc = generateExpenseReportDocx(content);
+      doc = generateExpenseReportDocx(content, design);
       break;
     case 'COVER_LETTER':
     case 'JOB_DESCRIPTION':
@@ -76,16 +81,89 @@ export async function generateDocx(content: any, templateType: string): Promise<
     case 'COMPLIANCE_AUDIT':
     case 'MERGER_PROPOSAL':
     case 'INVESTOR_PITCH':
-      doc = generateGenericDocx(content, templateType);
+      doc = generateGenericDocx(content, templateType, design);
       break;
     default:
-      doc = generateGenericDocx(content, templateType);
+      doc = generateGenericDocx(content, templateType, design);
   }
 
   return await Packer.toBuffer(doc);
 }
 
-function generateExpenseReportDocx(content: any): Document {
+function toDocxColor(hex: string | undefined, fallback: string): string {
+  const normalized = String(hex || fallback).replace('#', '').trim();
+  return /^[A-Fa-f0-9]{6}$/.test(normalized) ? normalized.toUpperCase() : fallback.replace('#', '').toUpperCase();
+}
+
+function getParagraphSpacing(spacingScale?: 'compact' | 'normal' | 'relaxed') {
+  switch (spacingScale) {
+    case 'compact':
+      return 120;
+    case 'relaxed':
+      return 260;
+    default:
+      return 180;
+  }
+}
+
+function createStyledDocument(children: Paragraph[] | (Paragraph | Table)[], design?: ResolvedDesign): Document {
+  const headingColor = toDocxColor(design?.primaryColor, '#2563EB');
+  const textColor = toDocxColor(design?.bodyColor || design?.headingColor, '#334155');
+  const spacingAfter = getParagraphSpacing(design?.spacingScale);
+
+  return new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: design?.fontBody || 'Roboto',
+            color: textColor,
+            size: 22,
+          },
+          paragraph: {
+            spacing: { after: spacingAfter },
+          },
+        },
+        heading1: {
+          run: {
+            font: design?.fontHeading || 'Inter',
+            bold: true,
+            color: headingColor,
+            size: 40,
+          },
+          paragraph: {
+            spacing: { before: 220, after: 220 },
+          },
+        },
+        heading2: {
+          run: {
+            font: design?.fontHeading || 'Inter',
+            bold: true,
+            color: headingColor,
+            size: 30,
+          },
+          paragraph: {
+            spacing: { before: 160, after: 140 },
+          },
+        },
+        heading3: {
+          run: {
+            font: design?.fontHeading || 'Inter',
+            bold: true,
+            color: headingColor,
+            size: 26,
+          },
+          paragraph: {
+            spacing: { before: 120, after: 120 },
+          },
+        },
+      },
+    },
+    sections: [{ children }],
+  });
+}
+
+function generateExpenseReportDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   sections.push(
@@ -149,12 +227,10 @@ function generateExpenseReportDocx(content: any): Document {
     })
   );
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generateGenericDocx(content: any, type: string): Document {
+function generateGenericDocx(content: any, type: string, design?: ResolvedDesign): Document {
   const sections = [];
 
   sections.push(
@@ -175,7 +251,7 @@ function generateGenericDocx(content: any, type: string): Document {
           sections.push(new Paragraph({ text: `Item ${index + 1}`, heading: HeadingLevel.HEADING_3, spacing: { before: 200 } }));
           renderValue(item, depth + 1);
         } else {
-          sections.push(new Paragraph({ text: `• ${item}`, bullet: { level: 0 } }));
+          sections.push(new Paragraph({ text: `- ${item}`, bullet: { level: 0 } }));
         }
       });
     } else if (typeof val === 'object' && val !== null) {
@@ -204,12 +280,10 @@ function generateGenericDocx(content: any, type: string): Document {
 
   renderValue(content);
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generateResumeDocx(content: any): Document {
+function generateResumeDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   // Header
@@ -320,12 +394,10 @@ function generateResumeDocx(content: any): Document {
     })
   );
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generateContractDocx(content: any): Document {
+function generateContractDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   sections.push(
@@ -394,12 +466,10 @@ function generateContractDocx(content: any): Document {
     })
   );
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generateNewsletterDocx(content: any): Document {
+function generateNewsletterDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   sections.push(
@@ -441,19 +511,17 @@ function generateNewsletterDocx(content: any): Document {
     content.upcomingEvents.forEach((event: string) => {
       sections.push(
         new Paragraph({
-          text: `• ${event}`,
+          text: `- ${event}`,
           spacing: { after: 100 },
         })
       );
     });
   }
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generateMinutesDocx(content: any): Document {
+function generateMinutesDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   sections.push(
@@ -487,7 +555,7 @@ function generateMinutesDocx(content: any): Document {
     new Paragraph({ text: 'AGENDA', heading: HeadingLevel.HEADING_3, spacing: { before: 200, after: 100 } })
   );
   content.agenda.forEach((item: string) => {
-    sections.push(new Paragraph({ text: `• ${item}`, spacing: { after: 100 } }));
+    sections.push(new Paragraph({ text: `- ${item}`, spacing: { after: 100 } }));
   });
 
   // Discussions
@@ -509,19 +577,17 @@ function generateMinutesDocx(content: any): Document {
     content.actionItems.forEach((action: any) => {
       sections.push(
         new Paragraph({
-          text: `• ${action.item} (Assignee: ${action.assignee})`,
+          text: `- ${action.item} (Assignee: ${action.assignee})`,
           spacing: { after: 100 },
         })
       );
     });
   }
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generateInvoiceDocx(content: any): Document {
+function generateInvoiceDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   // Header
@@ -640,12 +706,10 @@ function generateInvoiceDocx(content: any): Document {
     );
   }
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generateReportDocx(content: any): Document {
+function generateReportDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   // Title
@@ -714,7 +778,7 @@ function generateReportDocx(content: any): Document {
   content.findings.forEach((finding: string) => {
     sections.push(
       new Paragraph({
-        text: `• ${finding}`,
+        text: `- ${finding}`,
         spacing: { after: 100 },
       })
     );
@@ -731,7 +795,7 @@ function generateReportDocx(content: any): Document {
   content.recommendations.forEach((rec: string) => {
     sections.push(
       new Paragraph({
-        text: `• ${rec}`,
+        text: `- ${rec}`,
         spacing: { after: 100 },
       })
     );
@@ -747,12 +811,10 @@ function generateReportDocx(content: any): Document {
     new Paragraph(content.conclusion)
   );
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generateMemoDocx(content: any): Document {
+function generateMemoDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   // Header
@@ -824,19 +886,17 @@ function generateMemoDocx(content: any): Document {
     content.actionItems.forEach((item: string) => {
       sections.push(
         new Paragraph({
-          text: `• ${item}`,
+          text: `- ${item}`,
           spacing: { after: 100 },
         })
       );
     });
   }
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generateContentDocx(content: any): Document {
+function generateContentDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   // Title
@@ -892,12 +952,10 @@ function generateContentDocx(content: any): Document {
     })
   );
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generatePresentationDocx(content: any): Document {
+function generatePresentationDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   // Presentation Title Slide
@@ -931,7 +989,7 @@ function generatePresentationDocx(content: any): Document {
     slide.content.forEach((point: string) => {
       sections.push(
         new Paragraph({
-          text: `• ${point}`,
+          text: `- ${point}`,
           spacing: { after: 200 },
         })
       );
@@ -948,12 +1006,10 @@ function generatePresentationDocx(content: any): Document {
     );
   });
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generateProposalDocx(content: any): Document {
+function generateProposalDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   sections.push(
@@ -1022,12 +1078,10 @@ function generateProposalDocx(content: any): Document {
     new Paragraph({ text: content.callToAction, spacing: { after: 400 } })
   );
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generatePRDDocx(content: any): Document {
+function generatePRDDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   sections.push(
@@ -1100,12 +1154,10 @@ function generatePRDDocx(content: any): Document {
     ...content.successMetrics.map((m: string) => new Paragraph({ text: m, bullet: { level: 0 } }))
   );
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generatePressReleaseDocx(content: any): Document {
+function generatePressReleaseDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   sections.push(
@@ -1119,7 +1171,7 @@ function generatePressReleaseDocx(content: any): Document {
     }),
     new Paragraph({
       children: [
-        new TextRun({ text: `${content.locationDate} — `, bold: true }),
+        new TextRun({ text: `${content.locationDate} - `, bold: true }),
         new TextRun(content.lead),
       ],
       spacing: { after: 200 },
@@ -1137,7 +1189,7 @@ function generatePressReleaseDocx(content: any): Document {
         spacing: { before: 200 },
       }),
       new Paragraph({
-        children: [new TextRun({ text: `— ${q.speaker}`, bold: true })],
+        children: [new TextRun({ text: `- ${q.speaker}`, bold: true })],
         spacing: { after: 300 },
       })
     );
@@ -1152,12 +1204,10 @@ function generatePressReleaseDocx(content: any): Document {
     new Paragraph({ text: '###', alignment: AlignmentType.CENTER, spacing: { before: 600 } })
   );
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
 
-function generateCaseStudyDocx(content: any): Document {
+function generateCaseStudyDocx(content: any, design?: ResolvedDesign): Document {
   const sections = [];
 
   sections.push(
@@ -1201,13 +1251,12 @@ function generateCaseStudyDocx(content: any): Document {
       alignment: AlignmentType.CENTER,
     }),
     new Paragraph({
-      children: [new TextRun({ text: `— ${content.clientQuote.speaker}`, bold: true })],
+      children: [new TextRun({ text: `- ${content.clientQuote.speaker}`, bold: true })],
       alignment: AlignmentType.CENTER,
       spacing: { after: 400 },
     })
   );
 
-  return new Document({
-    sections: [{ children: sections }],
-  });
+  return createStyledDocument(sections, design);
 }
+

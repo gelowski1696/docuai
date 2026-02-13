@@ -13,17 +13,44 @@ interface TemplateBrowserProps {
 const TEMPLATES_PER_PAGE = 24;
 
 const TEMPLATE_ICONS: Record<string, string> = {
-  'INVOICE': '📄', 'REPORT': '📊', 'MEMO': '✉️', 'CONTENT': '🖋️',
-  'PRESENTATION': '📽️', 'RESUME': '👤', 'LEGAL_CONTRACT': '⚖️', 'NEWSLETTER': '📰',
-  'MEETING_MINUTES': '⏰', 'PROJECT_PROPOSAL': '📝', 'PRODUCT_SPEC': '💻', 'PRESS_RELEASE': '📢',
-  'CASE_STUDY': '🎯', 'JOB_DESCRIPTION': '💼', 'COVER_LETTER': '📨', 'SOCIAL_MEDIA_PLAN': '📱',
-  'SOP': '📋', 'MEETING_AGENDA': '📅', 'THANK_YOU_NOTE': '💌', 'EXPENSE_REPORT': '💰',
-  'DAILY_STANDUP': '🌅', 'FEEDBACK_FORM': '💬', 'EVENT_INVITATION': '🎉',
-  'ONBOARDING_CHECKLIST': '✅', 'PERFORMANCE_REVIEW': '⭐', 'TRAINING_MANUAL': '📚',
-  'INCIDENT_REPORT': '⚠️', 'QUARTERLY_GOALS': '🎯', 'WHITE_PAPER': '📑', 'RFP_RESPONSE': '📤',
-  'EXECUTIVE_SUMMARY': '📌', 'BUSINESS_PLAN': '🏢', 'SWOT_ANALYSIS': '🔍',
-  'ANNUAL_REPORT': '📈', 'BOARD_PRESENTATION': '🎤', 'COMPLIANCE_AUDIT': '🛡️',
-  'MERGER_PROPOSAL': '🤝', 'INVESTOR_PITCH': '💎'
+  INVOICE: '\u{1F4C4}',
+  REPORT: '\u{1F4CA}',
+  MEMO: '\u2709\uFE0F',
+  CONTENT: '\u{1F58B}\uFE0F',
+  PRESENTATION: '\u{1F4FD}\uFE0F',
+  RESUME: '\u{1F464}',
+  LEGAL_CONTRACT: '\u2696\uFE0F',
+  NEWSLETTER: '\u{1F4F0}',
+  MEETING_MINUTES: '\u23F0',
+  PROJECT_PROPOSAL: '\u{1F4DD}',
+  PRODUCT_SPEC: '\u{1F4BB}',
+  PRESS_RELEASE: '\u{1F4E2}',
+  CASE_STUDY: '\u{1F3AF}',
+  JOB_DESCRIPTION: '\u{1F4BC}',
+  COVER_LETTER: '\u{1F4E8}',
+  SOCIAL_MEDIA_PLAN: '\u{1F4F1}',
+  SOP: '\u{1F4CB}',
+  MEETING_AGENDA: '\u{1F4C5}',
+  THANK_YOU_NOTE: '\u{1F48C}',
+  EXPENSE_REPORT: '\u{1F4B0}',
+  DAILY_STANDUP: '\u{1F305}',
+  FEEDBACK_FORM: '\u{1F4AC}',
+  EVENT_INVITATION: '\u{1F389}',
+  ONBOARDING_CHECKLIST: '\u2705',
+  PERFORMANCE_REVIEW: '\u2B50',
+  TRAINING_MANUAL: '\u{1F4DA}',
+  INCIDENT_REPORT: '\u26A0\uFE0F',
+  QUARTERLY_GOALS: '\u{1F3AF}',
+  WHITE_PAPER: '\u{1F4D1}',
+  RFP_RESPONSE: '\u{1F4E4}',
+  EXECUTIVE_SUMMARY: '\u{1F4CC}',
+  BUSINESS_PLAN: '\u{1F3E2}',
+  SWOT_ANALYSIS: '\u{1F50D}',
+  ANNUAL_REPORT: '\u{1F4C8}',
+  BOARD_PRESENTATION: '\u{1F3A4}',
+  COMPLIANCE_AUDIT: '\u{1F6E1}\uFE0F',
+  MERGER_PROPOSAL: '\u{1F91D}',
+  INVESTOR_PITCH: '\u{1F48E}',
 };
 
 const TIER_COLORS: Record<SubscriptionTier, string> = {
@@ -102,7 +129,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
               >
-                <span>📁</span>
+                <span>{'\\u{1F4C1}'}</span>
                 <span>All Templates</span>
                 <span className="ml-auto text-xs opacity-70">{templates.length}</span>
               </button>
@@ -169,9 +196,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
               <button
                 onClick={() => handleSearchChange('')}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
+              >{'\\u00D7'}</button>
             )}
           </div>
 
@@ -208,7 +233,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
               onClick={() => handleCategoryChange(null)}
               className="text-primary hover:underline flex items-center gap-1"
             >
-              Clear filters ✕
+              Clear filters {'\\u00D7'}
             </button>
           )}
         </div>
@@ -236,7 +261,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
 
                   {/* Icon */}
                   <div className="w-12 h-12 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/40 dark:to-purple-900/40 rounded-xl flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">
-                    {TEMPLATE_ICONS[template.type] || '📄'}
+                    {TEMPLATE_ICONS[template.type] || '\\u{1F4C4}'}
                   </div>
 
                   {/* Name */}
@@ -253,7 +278,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
                   {isLocked && (
                     <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-900/50 rounded-2xl">
                       <span className="text-xs font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/50 px-3 py-1 rounded-full">
-                        🔒 Upgrade
+                        {'\\u{1F512}'} Upgrade
                       </span>
                     </div>
                   )}
@@ -279,7 +304,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
                 >
                   {/* Icon */}
                   <div className="w-10 h-10 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/40 dark:to-purple-900/40 rounded-lg flex items-center justify-center text-xl flex-shrink-0">
-                    {TEMPLATE_ICONS[template.type] || '📄'}
+                    {TEMPLATE_ICONS[template.type] || '\\u{1F4C4}'}
                   </div>
 
                   {/* Info */}
@@ -295,7 +320,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
 
                   {/* Lock/Arrow */}
                   {isLocked ? (
-                    <span className="text-amber-500">🔒</span>
+                    <span className="text-amber-500">{'\u{1F512}'}</span>
                   ) : (
                     <svg className="w-5 h-5 text-gray-300 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -310,7 +335,7 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
         {/* Empty State */}
         {filteredTemplates.length === 0 && (
           <div className="text-center py-16">
-            <div className="text-6xl mb-4">🔍</div>
+            <div className="text-6xl mb-4">{'\u{1F50D}'}</div>
             <h3 className="text-xl font-bold text-gray-600 dark:text-gray-300 mb-2">No templates found</h3>
             <p className="text-gray-400">Try adjusting your search or filters</p>
           </div>
@@ -371,3 +396,6 @@ export default function TemplateBrowser({ templates, subscription, onSelect }: T
     </div>
   );
 }
+
+
+

@@ -6,9 +6,15 @@ import Link from "next/link";
 import { generateDocument } from "@/app/actions/generate-document";
 import { getTemplates } from "@/app/actions/get-templates";
 import { getSubscription } from "@/app/actions/get-subscription";
+import { getDesignTemplates } from "@/app/actions/get-design-templates";
+import { getSession } from "@/app/actions/get-session";
 import SmartSuggestions from "./smart-suggestions";
 import TemplateBrowser from "./template-browser";
 import DynamicTemplateForm from "./dynamic-form";
+import DesignPicker from "./design-picker";
+import WizardProgress from "./wizard-progress";
+import ReviewStep from "./review-step";
+import FieldHelp from "./field-help";
 import {
   isTemplateLocked,
   getTemplateTier,
@@ -18,6 +24,10 @@ import {
 export default function GeneratePage() {
   const router = useRouter();
   const [templates, setTemplates] = useState<any[]>([]);
+  const [designTemplates, setDesignTemplates] = useState<any[]>([]);
+  const [designTemplatesLoadError, setDesignTemplatesLoadError] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedDesignTemplateId, setSelectedDesignTemplateId] = useState<string | undefined>(undefined);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [format, setFormat] = useState<"DOCX" | "PDF" | "XLSX">("DOCX");
   const [tone, setTone] = useState<string>("");
@@ -25,9 +35,21 @@ export default function GeneratePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [subscription, setSubscription] = useState<any>(null);
-  const [step, setStep] = useState(1); // 1: Select, 2: Configure
+  const [step, setStep] = useState(1); // 1: Goal, 2: Template, 3: Configure
+  const [configureStep, setConfigureStep] = useState<3 | 4 | 5>(3);
+  const [goal, setGoal] = useState("");
+  const [wizardMode, setWizardMode] = useState(true);
+  const [wizardPreferenceKey, setWizardPreferenceKey] = useState<string | null>(null);
+  const [experienceLevel, setExperienceLevel] = useState<
+    "non_technical" | "general" | "technical"
+  >("general");
+  const [estimatedSeconds, setEstimatedSeconds] = useState(35);
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [templatesLoadError, setTemplatesLoadError] = useState("");
+
+  const trackWizardEvent = (eventName: string, payload?: Record<string, unknown>) => {
+    console.info("[wizard]", eventName, payload || {});
+  };
 
   // Fetch templates and session on mount
   useEffect(() => {
@@ -36,9 +58,11 @@ export default function GeneratePage() {
         setTemplatesLoading(true);
         setTemplatesLoadError("");
 
-        const [templatesResult, subResult] = await Promise.all([
+        const [templatesResult, subResult, designTemplatesResult, sessionResult] = await Promise.all([
           getTemplates(),
           getSubscription(),
+          getDesignTemplates(),
+          getSession(),
         ]);
 
         if (templatesResult.success && templatesResult.templates) {
@@ -53,9 +77,32 @@ export default function GeneratePage() {
         if (subResult.success) {
           setSubscription(subResult.subscription);
         }
+
+        if (designTemplatesResult.success) {
+          setDesignTemplates(designTemplatesResult.templates || []);
+          setIsAdmin(Boolean(designTemplatesResult.isAdmin));
+          const defaultDesign = (designTemplatesResult.templates || []).find(
+            (template: any) => template.isDefault
+          );
+          setSelectedDesignTemplateId(defaultDesign?.id);
+        } else {
+          setDesignTemplates([]);
+          setDesignTemplatesLoadError(designTemplatesResult.error || "Failed to load design templates.");
+        }
+
+        const userEmail = sessionResult?.email || "anonymous";
+        const preferenceKey = `docuai:wizard-mode:${userEmail}`;
+        setWizardPreferenceKey(preferenceKey);
+        if (typeof window !== "undefined") {
+          const saved = window.localStorage.getItem(preferenceKey);
+          if (saved === "on") setWizardMode(true);
+          if (saved === "off") setWizardMode(false);
+        }
       } catch {
         setTemplates([]);
         setTemplatesLoadError("Failed to load templates.");
+        setDesignTemplates([]);
+        setDesignTemplatesLoadError("Failed to load design templates.");
       } finally {
         setTemplatesLoading(false);
       }
@@ -66,11 +113,15 @@ export default function GeneratePage() {
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplate(templateId);
     setFormData({});
-    setStep(2);
+    const defaultDesign = designTemplates.find((template) => template.isDefault);
+    setSelectedDesignTemplateId(defaultDesign?.id);
+    setStep(3);
+    setConfigureStep(3);
+    trackWizardEvent("template_selected", { templateId, goal });
   };
 
   const goBack = () => {
-    setStep(1);
+    setStep(2);
     setSelectedTemplate("");
   };
 
@@ -552,6 +603,9 @@ export default function GeneratePage() {
       const result = await generateDocument({
         templateId: selectedTemplate,
         format,
+        designTemplateId: format === "XLSX" ? undefined : selectedDesignTemplateId,
+        wizardMode,
+        experienceLevel,
         userInput: formData,
         tone: tone || undefined,
       });
@@ -563,6 +617,7 @@ export default function GeneratePage() {
       }
 
       // Redirect immediately to library with queuing flag
+      trackWizardEvent("generation_submitted", { templateId: selectedTemplate, format, goal });
       router.push(`/documents?queuing=true&id=${result.documentId}`);
     } catch (err) {
       setError("An error occurred. Please try again.");
@@ -571,6 +626,7 @@ export default function GeneratePage() {
   };
 
   const selectedTemplateData = templates.find((t) => t.id === selectedTemplate);
+  const selectedDesignData = designTemplates.find((t) => t.id === selectedDesignTemplateId);
   const templateType = selectedTemplateData?.type;
   const supportedFormats = selectedTemplateData?.supportedFormats?.split(
     ",",
@@ -582,6 +638,41 @@ export default function GeneratePage() {
       setFormat(supportedFormats[0] as any);
     }
   }, [selectedTemplate, supportedFormats, format]);
+
+  useEffect(() => {
+    if (!selectedDesignTemplateId) return;
+    const selectedDesign = designTemplates.find((template) => template.id === selectedDesignTemplateId);
+    if (!selectedDesign) return;
+    const supportsCurrentFormat = String(selectedDesign.targetFormats || '')
+      .split(',')
+      .map((value) => value.trim().toUpperCase())
+      .includes(format);
+    if (supportsCurrentFormat) return;
+
+    const fallback = designTemplates.find((template) =>
+      String(template.targetFormats || '')
+        .split(',')
+        .map((value) => value.trim().toUpperCase())
+        .includes(format)
+    );
+    setSelectedDesignTemplateId(fallback?.id);
+  }, [format, designTemplates, selectedDesignTemplateId]);
+
+  useEffect(() => {
+    if (!wizardPreferenceKey || typeof window === "undefined") return;
+    window.localStorage.setItem(wizardPreferenceKey, wizardMode ? "on" : "off");
+  }, [wizardMode, wizardPreferenceKey]);
+
+  useEffect(() => {
+    const current =
+      step === 1 ? 1 : step === 2 ? 2 : configureStep;
+    trackWizardEvent("step_entered", { step: current });
+  }, [step, configureStep]);
+
+  useEffect(() => {
+    const fieldCount = Object.values(formData || {}).filter(Boolean).length;
+    setEstimatedSeconds(Math.max(20, 20 + fieldCount * 2));
+  }, [formData]);
 
   // Group templates by category
   const categories = [
@@ -626,6 +717,10 @@ export default function GeneratePage() {
     },
   ];
 
+  const usingClassicFlow = !wizardMode;
+  const showGoalStage = step === 1 && !usingClassicFlow;
+  const showTemplateStage = step === 2 || (step === 1 && usingClassicFlow);
+
   return (
     <div className="min-h-screen bg-background selection:bg-indigo-100 dark:selection:bg-indigo-900 relative">
       {/* Animated Background Glows */}
@@ -633,27 +728,111 @@ export default function GeneratePage() {
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none"></div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
-        {/* Progress Stepper */}
-        <div className="flex items-center justify-center mb-12">
-          <div className="flex items-center gap-4">
-            <div
-              className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-all duration-500 ${step === 1 ? "bg-primary text-white scale-110 shadow-lg shadow-primary/30" : "bg-green-500 text-white"}`}
-            >
-              {step > 1 ? "✓" : "1"}
+        {!usingClassicFlow && (
+          <WizardProgress currentStep={step === 1 ? 1 : step === 2 ? 2 : configureStep} />
+        )}
+
+        {showGoalStage ? (
+          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-4xl mx-auto">
+            <header className="mb-12 text-center">
+              <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-4 dark:text-white">
+                What do you want to <span className="gradient-text">create</span>?
+              </h1>
+              <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
+                Pick a simple goal first. We will guide you step-by-step, even if you are not technical.
+              </p>
+            </header>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              {[
+                { id: "client-doc", title: "Client Document", desc: "Invoices, proposals, contracts" },
+                { id: "internal-doc", title: "Internal Team Doc", desc: "Memos, reports, meeting docs" },
+                { id: "marketing-doc", title: "Marketing Content", desc: "Press releases, newsletters, social content" },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setGoal(item.title)}
+                  className={`rounded-2xl border p-5 text-left transition-all ${
+                    goal === item.title
+                      ? "border-primary bg-indigo-50 dark:bg-indigo-900/20 shadow-md"
+                      : "border-border/50 bg-white/60 dark:bg-slate-900/50 hover:border-primary/40"
+                  }`}
+                >
+                  <div className="font-black text-lg mb-1">{item.title}</div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.desc}</p>
+                </button>
+              ))}
             </div>
-            <div
-              className={`h-1 w-16 rounded-full transition-all duration-500 ${step > 1 ? "bg-green-500" : "bg-border"}`}
-            ></div>
-            <div
-              className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-all duration-500 ${step === 2 ? "bg-primary text-white scale-110 shadow-lg shadow-primary/30" : "bg-border text-gray-400"}`}
-            >
-              2
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Experience Level</label>
+                <select
+                  value={experienceLevel}
+                  onChange={(e) => setExperienceLevel(e.target.value as any)}
+                  className="w-full h-12 px-4 bg-background border border-border/50 rounded-xl"
+                >
+                  <option value="non_technical">I am not technical</option>
+                  <option value="general">General user</option>
+                  <option value="technical">Technical user</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Wizard Mode</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !wizardMode;
+                    setWizardMode(next);
+                    if (!next) {
+                      setStep(2);
+                    }
+                  }}
+                  className={`w-full h-12 rounded-xl border font-bold ${
+                    wizardMode
+                      ? "border-primary bg-indigo-50 dark:bg-indigo-900/20 text-primary"
+                      : "border-border/50 text-gray-500"
+                  }`}
+                >
+                  {wizardMode ? "Guided mode is ON" : "Guided mode is OFF"}
+                </button>
+              </div>
+            </div>
+
+            <FieldHelp
+              title="Friendly Tip"
+              hint="Use simple words. You can always edit details later after generation."
+            />
+
+            <div className="mt-8 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(2);
+                  trackWizardEvent("goal_selected", { goal, experienceLevel });
+                }}
+                disabled={!goal}
+                className="px-8 py-3 rounded-2xl bg-primary text-white font-black disabled:opacity-50"
+              >
+                Continue to Templates
+              </button>
             </div>
           </div>
-        </div>
-
-        {step === 1 ? (
+        ) : showTemplateStage ? (
           <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+            {!usingClassicFlow && (
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="mb-6 flex items-center text-gray-500 hover:text-primary font-bold transition-colors group"
+              >
+                <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Goal
+              </button>
+            )}
             <header className="mb-16 text-center">
               <h1 className="text-5xl md:text-6xl font-black tracking-tight mb-6 dark:text-white">
                 What are we <span className="gradient-text">Creating</span>{" "}
@@ -663,6 +842,25 @@ export default function GeneratePage() {
                 Choose a base template. Our AI will handle the structure,
                 design, and content perfectly.
               </p>
+              <div className="mb-8">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !wizardMode;
+                    setWizardMode(next);
+                    if (next) {
+                      setStep(1);
+                    }
+                  }}
+                  className={`h-11 px-5 rounded-xl border font-bold transition-all ${
+                    wizardMode
+                      ? "border-primary bg-indigo-50 dark:bg-indigo-900/20 text-primary"
+                      : "border-border/50 text-gray-500 hover:border-primary/40 hover:text-primary"
+                  }`}
+                >
+                  {wizardMode ? "Guided mode is ON" : "Guided mode is OFF (Classic flow)"}
+                </button>
+              </div>
 
               {subscription && (
                 <div className="inline-flex items-center gap-3 px-6 py-3 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md border border-border/50 rounded-full shadow-sm">
@@ -757,18 +955,25 @@ export default function GeneratePage() {
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6 border-b border-border/50 pb-10">
                     <div>
                       <div className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-2">
-                        Step 2: Configuration
+                        {usingClassicFlow ? "Classic Flow" : "Guided Wizard"}
                       </div>
                       <h2 className="text-3xl font-black">
                         {selectedTemplateData?.name}
                       </h2>
+                      {!usingClassicFlow && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                          {configureStep === 3 && "Step 3: Fill key information in plain language."}
+                          {configureStep === 4 && "Step 4: Optional advanced settings."}
+                          {configureStep === 5 && "Step 5: Review and generate."}
+                        </p>
+                      )}
                     </div>
                     <button
                       type="button"
                       onClick={autoFillTemplate}
                       className="px-8 py-4 bg-indigo-50 dark:bg-indigo-900/40 text-primary font-black rounded-2xl hover:bg-primary hover:text-white transition-all duration-300 flex items-center shadow-sm active:scale-95"
                     >
-                      <span className="mr-2">✨</span> Magic Auto-fill
+                      <span className="mr-2">✨</span> Use example to get started
                     </button>
                   </div>
 
@@ -789,6 +994,36 @@ export default function GeneratePage() {
                         {error}
                       </div>
                     )}
+
+                    {(usingClassicFlow || configureStep === 4) && (
+                      <>
+                    <FieldHelp
+                      title="Advanced (Optional)"
+                      hint="You can skip this section. Defaults are already selected for most users."
+                    />
+                    <div className="space-y-4">
+                      <label className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-2">
+                        Document Design
+                      </label>
+                      {designTemplatesLoadError ? (
+                        <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm font-medium text-amber-700 dark:text-amber-300">
+                          {designTemplatesLoadError}
+                        </div>
+                      ) : (
+                        <DesignPicker
+                          templates={designTemplates}
+                          selectedDesignTemplateId={selectedDesignTemplateId}
+                          onSelect={setSelectedDesignTemplateId}
+                          format={format}
+                          showDefaultBadge={isAdmin}
+                        />
+                      )}
+                      {format === "XLSX" && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Design templates apply to DOCX and PDF only in v1.
+                        </p>
+                      )}
+                    </div>
 
                     <div className="space-y-4">
                       <label className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-2">
@@ -838,8 +1073,27 @@ export default function GeneratePage() {
                         <option value="Friendly">Friendly</option>
                         <option value="Formal">Formal</option>
                       </select>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { label: "Professional", value: "Professional" },
+                          { label: "Status Update", value: "Formal" },
+                          { label: "Team Note", value: "Friendly" },
+                        ].map((preset) => (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => setTone(preset.value)}
+                            className="px-3 py-1.5 rounded-full text-xs font-bold border border-border/50 hover:border-primary hover:text-primary transition-colors"
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
+                    </>
+                    )}
 
+                    {(usingClassicFlow || configureStep === 3) && (
                     <div className="bg-gray-50/30 dark:bg-gray-800/20 rounded-[2.5rem] p-8 md:p-10 border border-border/30">
                       {templateType === "INVOICE" && (
                         <div className="space-y-8">
@@ -2275,74 +2529,121 @@ export default function GeneratePage() {
                           />
                         )}
                     </div>
+                    )}
 
-                    <button
-                      type="submit"
-                      disabled={loading || subscription?.isLimitReached}
-                      className="group relative w-full h-20 rounded-[2rem] bg-primary text-white font-black text-xl shadow-2xl shadow-primary/40 hover:shadow-primary/60 transition-all duration-500 overflow-hidden active:scale-[0.97] disabled:opacity-70 disabled:cursor-not-allowed"
-                    >
-                      <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
-                      <span className="relative flex items-center justify-center">
-                        {loading ? (
-                          <>
-                            <svg
-                              className="animate-spin -ml-1 mr-4 h-8 w-8 text-white"
-                              fill="none"
-                              viewBox="0 0 24 24"
+                    {!usingClassicFlow && configureStep === 5 && (
+                      <ReviewStep
+                        templateName={selectedTemplateData?.name}
+                        goal={goal}
+                        format={format}
+                        tone={tone}
+                        designName={selectedDesignData?.name}
+                        experienceLevel={experienceLevel}
+                        estimatedSeconds={estimatedSeconds}
+                        fieldCount={Object.values(formData || {}).filter(Boolean).length}
+                      />
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      {usingClassicFlow ? (
+                        <button
+                          type="submit"
+                          disabled={loading || subscription?.isLimitReached}
+                          className="group relative flex-1 h-20 rounded-[2rem] bg-primary text-white font-black text-xl shadow-2xl shadow-primary/40 hover:shadow-primary/60 transition-all duration-500 overflow-hidden active:scale-[0.97] disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
+                          <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
+                          <span className="relative flex items-center justify-center">
+                            {loading ? "Creating your document..." : `Generate ${selectedTemplateData?.name || "Document"}`}
+                          </span>
+                        </button>
+                      ) : (
+                        <>
+                      {configureStep > 3 && (
+                        <button
+                          type="button"
+                          onClick={() => setConfigureStep((configureStep - 1) as 3 | 4 | 5)}
+                          className="h-14 px-6 rounded-2xl border border-border/50 font-bold"
+                        >
+                          Back
+                        </button>
+                      )}
+
+                      {configureStep < 5 ? (
+                        <>
+                          {configureStep === 3 && (
+                            <button
+                              type="button"
+                              onClick={() => setConfigureStep(5)}
+                              className="h-14 px-6 rounded-2xl border border-border/50 font-bold"
                             >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              ></circle>
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              ></path>
-                            </svg>
-                            Creating Masterpiece...
-                          </>
-                        ) : subscription?.isLimitReached ? (
-                          <>
-                            Monthly Limit Reached
-                            <svg
-                              className="w-7 h-7 ml-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={3}
-                                d="M12 15v2m0 0v2m0-2h2m-2 0H10m4-11a4 4 0 11-8 0 4 4 0 018 0zM12 7h.01"
-                              />
-                            </svg>
-                          </>
-                        ) : (
-                          <>
-                            Generate {selectedTemplateData?.name}
-                            <svg
-                              className="w-7 h-7 ml-4 group-hover:translate-x-2 transition-transform duration-300"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={3}
-                                d="M13 10V3L4 14h7v7l9-11h-7z"
-                              />
-                            </svg>
-                          </>
-                        )}
-                      </span>
-                    </button>
+                              Skip Advanced
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setConfigureStep((configureStep + 1) as 3 | 4 | 5)}
+                            className="h-14 px-6 rounded-2xl bg-primary text-white font-black"
+                          >
+                            {configureStep === 3 ? "Continue to Advanced (Optional)" : "Continue to Review"}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="submit"
+                          disabled={loading || subscription?.isLimitReached}
+                          className="group relative flex-1 h-20 rounded-[2rem] bg-primary text-white font-black text-xl shadow-2xl shadow-primary/40 hover:shadow-primary/60 transition-all duration-500 overflow-hidden active:scale-[0.97] disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
+                          <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
+                          <span className="relative flex items-center justify-center">
+                            {loading ? (
+                              <>
+                                <svg
+                                  className="animate-spin -ml-1 mr-4 h-8 w-8 text-white"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  ></circle>
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  ></path>
+                                </svg>
+                                Creating your document...
+                              </>
+                            ) : subscription?.isLimitReached ? (
+                              <>Monthly Limit Reached</>
+                            ) : (
+                              <>
+                                Generate {selectedTemplateData?.name}
+                                <svg
+                                  className="w-7 h-7 ml-4 group-hover:translate-x-2 transition-transform duration-300"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={3}
+                                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                                  />
+                                </svg>
+                              </>
+                            )}
+                          </span>
+                        </button>
+                      )}
+                        </>
+                      )}
+                    </div>
 
                     {subscription?.isLimitReached && (
                       <div className="mt-6 p-6 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 rounded-3xl text-center">

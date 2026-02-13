@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer';
+import type { ResolvedDesign } from '@/lib/generators/design/resolve-design';
 
 /**
  * Generate PDF document from AI-generated content using Puppeteer
@@ -6,13 +7,17 @@ import puppeteer from 'puppeteer';
  * Renders HTML templates and converts to PDF
  */
 
-export async function generatePdf(content: any, templateType: string): Promise<Buffer> {
+export async function generatePdf(
+  content: any,
+  templateType: string,
+  design?: ResolvedDesign
+): Promise<Buffer> {
   const normalizedType = templateType.toUpperCase();
   const resolvedContent =
     normalizedType === 'PRESENTATION'
       ? await enrichPresentationImages(content)
       : content;
-  const html = generateHtml(resolvedContent, templateType);
+  const html = generateHtml(resolvedContent, templateType, design);
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -107,24 +112,36 @@ async function searchWikimediaCommonsImage(query: string): Promise<string | null
   return null;
 }
 
-function generateHtml(content: any, templateType: string): string {
+function sanitizeCssValue(value: string | undefined, fallback: string): string {
+  return String(value || fallback).trim().replace(/[;<>{}`"]/g, '');
+}
+
+function generateHtml(content: any, templateType: string, design?: ResolvedDesign): string {
+  const primaryColor = sanitizeCssValue(design?.primaryColor, '#2563eb');
+  const secondaryColor = sanitizeCssValue(design?.bodyColor || design?.secondaryColor, '#4b5563');
+  const accentColor = sanitizeCssValue(design?.secondaryColor || design?.primaryColor, '#1e40af');
+  const textMain = sanitizeCssValue(design?.headingColor, '#1e293b');
+  const textMuted = sanitizeCssValue(design?.bodyColor, '#64748b');
+  const headingFont = sanitizeCssValue(design?.fontHeading, 'Inter');
+  const bodyFont = sanitizeCssValue(design?.fontBody, 'Roboto');
+
   const baseStyles = `
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
       :root {
-        --primary: #2563eb;
-        --secondary: #4b5563;
-        --accent: #1e40af;
+        --primary: ${primaryColor};
+        --secondary: ${secondaryColor};
+        --accent: ${accentColor};
         --bg-alt: #f8fafc;
         --border: #e2e8f0;
-        --text-main: #1e293b;
-        --text-muted: #64748b;
+        --text-main: ${textMain};
+        --text-muted: ${textMuted};
       }
       
       body {
-        font-family: 'Roboto', sans-serif;
+        font-family: '${bodyFont}', sans-serif;
         line-height: 1.6;
         color: var(--text-main);
         max-width: 800px;
@@ -134,7 +151,7 @@ function generateHtml(content: any, templateType: string): string {
       }
       
       h1, h2, h3, .heading-font {
-        font-family: 'Inter', sans-serif;
+        font-family: '${headingFont}', sans-serif;
         font-weight: 700;
         letter-spacing: -0.02em;
       }

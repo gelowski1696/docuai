@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react';
 import { updateUserTier } from '@/app/actions/admin-users';
 import { useRouter } from 'next/navigation';
+import ConfirmDialog from '@/components/ui/confirm-dialog';
 
 const TIER_OPTIONS = ['FREE', 'STARTER', 'PRO', 'ENTERPRISE'] as const;
 
 export default function TierEditor({ userId, currentTier }: { userId: string; currentTier: string }) {
   const [loading, setLoading] = useState(false);
   const [selectedTier, setSelectedTier] = useState(currentTier);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const router = useRouter();
 
@@ -18,13 +20,11 @@ export default function TierEditor({ userId, currentTier }: { userId: string; cu
     return () => clearTimeout(timer);
   }, [notification]);
 
-  const handleSave = async () => {
-    if (selectedTier === currentTier) return;
-    if (!confirm(`Are you sure you want to change this user tier to ${selectedTier}?`)) return;
-
+  const handleConfirmSave = async () => {
     setLoading(true);
     const result = await updateUserTier(userId, selectedTier);
     setLoading(false);
+    setConfirmOpen(false);
 
     if (result.success) {
       router.refresh();
@@ -36,6 +36,16 @@ export default function TierEditor({ userId, currentTier }: { userId: string; cu
 
   return (
     <>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Confirm Tier Change"
+        description={`Change this user's subscription tier to ${selectedTier}?`}
+        confirmLabel="Update Tier"
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmSave}
+        loading={loading}
+      />
+
       {notification && (
         <div
           className={`fixed bottom-8 right-8 z-[110] px-6 py-4 rounded-2xl shadow-2xl border animate-in slide-in-from-right-10 duration-500 ${
@@ -63,7 +73,7 @@ export default function TierEditor({ userId, currentTier }: { userId: string; cu
           ))}
         </select>
         <button
-          onClick={handleSave}
+          onClick={() => setConfirmOpen(true)}
           disabled={loading || selectedTier === currentTier}
           className="h-10 px-4 rounded-xl text-sm font-bold transition-all duration-300 disabled:opacity-50 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white"
         >

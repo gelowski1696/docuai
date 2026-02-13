@@ -8,6 +8,7 @@ import { buildPromptForTemplate } from '@/lib/ai/prompts';
 import { generateDocx } from '@/lib/generators/docx';
 import { generatePdf } from '@/lib/generators/pdf';
 import { generateXlsx } from '@/lib/generators/xlsx';
+import { resolveDesignForGeneration } from '@/lib/generators/design/resolve-design';
 import { saveFile, generateFilename } from '@/lib/storage';
 import { revalidatePath } from 'next/cache';
 import { after } from 'next/server';
@@ -22,6 +23,9 @@ import { after } from 'next/server';
 export interface GenerateDocumentInput {
   templateId: string;
   format: 'DOCX' | 'PDF' | 'XLSX';
+  designTemplateId?: string;
+  wizardMode?: boolean;
+  experienceLevel?: 'non_technical' | 'general' | 'technical';
   userInput: any;
   tone?: string;
 }
@@ -149,6 +153,18 @@ export async function generateDocument(
     }
 
     const normalizedInput = normalizeTemplateInput(template.type, input.userInput);
+    let resolvedDesign: Awaited<ReturnType<typeof resolveDesignForGeneration>> | null = null;
+    try {
+      resolvedDesign = await resolveDesignForGeneration({
+        requestedDesignTemplateId: input.designTemplateId,
+        format: input.format,
+      });
+    } catch (designError) {
+      return {
+        success: false,
+        error: designError instanceof Error ? designError.message : 'Invalid design selection',
+      };
+    }
 
     // 3. Create a processing placeholder record instantly
     const document = await prisma.document.create({
@@ -161,6 +177,7 @@ export async function generateDocument(
         format: input.format,
         status: 'PROCESSING',
         tone: input.tone,
+        designTemplateId: resolvedDesign?.id !== 'system-fallback' ? resolvedDesign?.id : null,
       },
     });
 
@@ -188,10 +205,10 @@ export async function generateDocument(
         let fileBuffer: Buffer;
         switch (input.format) {
           case 'DOCX':
-            fileBuffer = await generateDocx(aiContent, template.type);
+            fileBuffer = await generateDocx(aiContent, template.type, resolvedDesign || undefined);
             break;
           case 'PDF':
-            fileBuffer = await generatePdf(aiContent, template.type);
+            fileBuffer = await generatePdf(aiContent, template.type, resolvedDesign || undefined);
             break;
           case 'XLSX':
             fileBuffer = await generateXlsx(aiContent, template.type);
